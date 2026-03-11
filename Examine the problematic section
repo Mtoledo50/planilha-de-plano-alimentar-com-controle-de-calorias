@@ -1,0 +1,62 @@
+# Examine the problematic section
+bash
+
+cd /home/claude && python3 -c "
+# The issue: the first pass (lines ~490-510) pre-filled ws2 with merged cells
+# then the second pass tries to write into those merged cells.
+# Fix: remove the first pass entirely, leaving only the second (ws2_data) pass
+# Check lines 480-525
+" && sed -n '480,530p' build_dieta.py
+Saída
+
+        MEAL_END += 1
+        # shift remaining rows — just continue, tracking an offset
+        # Actually, we'll just add the header as its own row by extending the loop
+        # re-insert data row after header
+        row2 = row + 1
+        # We'll need to re-do this logic differently — let's just build all rows linearly
+        pass
+
+# Reset and build properly with section headers counted
+ws2_data = []  # list of (type, data)
+prev_meal2 = None
+for refeicao, alimento, porcao in REFEICOES:
+    if refeicao != prev_meal2:
+        ws2_data.append(("header", refeicao))
+        prev_meal2 = refeicao
+    ws2_data.append(("food", (refeicao, alimento, porcao)))
+
+# Unmerge any existing merges in meal area and rewrite
+MEAL_START = 8
+for i, item in enumerate(ws2_data):
+    row = MEAL_START + i
+    ws2.row_dimensions[row].height = 20 if item[0] == "food" else 24
+
+    if item[0] == "header":
+        refeicao = item[1]
+        dark, light = meal_colors.get(refeicao, (C["cinza_med"], C["cinza_bg"]))
+        ws2.merge_cells(f"B{row}:K{row}")
+        c = ws2.cell(row=row, column=2, value=f"  {refeicao}")
+        c.font = ft(11, True, C["branco"]); c.fill = F(dark); c.border = BDR; c.alignment = al("left")
+    else:
+        refeicao, alimento, porcao = item[1]
+        dark, light = meal_colors.get(refeicao, (C["cinza_med"], C["cinza_bg"]))
+        alt_bg = light if i % 2 == 0 else C["branco"]
+
+        seq = sum(1 for x in ws2_data[:i] if x[0] == "food") + 1
+        # seq #
+        c = ws2.cell(row=row, column=2, value=seq)
+        c.font = ft(9, color=C["cinza"]); c.fill = F(alt_bg); c.border = BDR; c.alignment = al("center")
+
+        # Alimento (input-style, pre-filled)
+        c = ws2.cell(row=row, column=3, value=alimento)
+        c.font = ft(10, color=C["input_azul"]); c.fill = F(C["input_am"])
+        c.border = bdr("thin", C["input_bor"]); c.alignment = al("left", "center")
+
+        # Refeição
+        c = ws2.cell(row=row, column=4, value=refeicao)
+        c.font = ft(9, color=C["branco"]); c.fill = F(dark); c.border = BDR; c.alignment = al("center", "center", wrap=True)
+
+        # Porção (input, pre-filled)
+        c = ws2.cell(row=row, column=5, value=porcao)
+        c.font = ft(10, True, C["input_azul"]); c.fill = F(C["input_am"])
