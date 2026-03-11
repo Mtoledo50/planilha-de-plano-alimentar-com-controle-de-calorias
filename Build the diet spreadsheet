@@ -1,0 +1,14 @@
+# Build the diet spreadsheet
+bash
+
+cd /home/claude && python build_dieta.py 2>&1
+Saída
+
+Traceback (most recent call last):
+  File "/home/claude/build_dieta.py", line 520, in <module>
+    c = ws2.cell(row=row, column=3, value=alimento)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/openpyxl/worksheet/worksheet.py", line 246, in cell
+    cell.value = value
+    ^^^^^^^^^^
+AttributeError: 'MergedCell' object attribute 'value' is read-only
