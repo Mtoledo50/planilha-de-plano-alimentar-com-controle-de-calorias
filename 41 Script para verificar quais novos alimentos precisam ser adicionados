@@ -1,0 +1,45 @@
+bash
+
+cd /home/claude && python3 -c "
+from openpyxl import load_workbook
+wb = load_workbook('plano_semanal.xlsx')
+ws_lst = wb['_Listas']
+# Check existing foods
+foods = []
+for row in ws_lst.iter_rows(min_row=2, max_row=ws_lst.max_row, min_col=1, max_col=1):
+    if row[0].value:
+        foods.append(str(row[0].value))
+print(f'Total foods in dropdown list: {len(foods)}')
+# Check nutri table
+nutri = {}
+for row in ws_lst.iter_rows(min_row=2, max_row=ws_lst.max_row, min_col=3, max_col=8):
+    if row[0].value:
+        nutri[str(row[0].value)] = tuple(c.value for c in row[1:])
+print(f'Total foods in nutri table: {len(nutri)}')
+# Check which new foods are missing
+new_foods = ['Farelo de aveia','Doce de leite','Melão','Vazio grelhado',
+             'Cerveja Amstel Ultra','Maionese light','Milho verde cozido',
+             'Doce de leite diet','Mamão papaya','Massa para pizza',
+             'Orégano seco','Leite de vaca integral','Whey protein','Pão integral']
+for f in new_foods:
+    status = '✓' if f in nutri else '✗ MISSING'
+    print(f'  {status}: {f}')
+" 2>&1
+Saída
+
+Total foods in dropdown list: 79
+Total foods in nutri table: 79
+  ✗ MISSING: Farelo de aveia
+  ✗ MISSING: Doce de leite
+  ✓: Melão
+  ✗ MISSING: Vazio grelhado
+  ✗ MISSING: Cerveja Amstel Ultra
+  ✗ MISSING: Maionese light
+  ✗ MISSING: Milho verde cozido
+  ✗ MISSING: Doce de leite diet
+  ✓: Mamão papaya
+  ✗ MISSING: Massa para pizza
+  ✗ MISSING: Orégano seco
+  ✓: Leite de vaca integral
+  ✓: Whey protein
+  ✓: Pão integral
