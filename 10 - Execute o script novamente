@@ -1,0 +1,6 @@
+bash
+
+cd /home/claude && python build_dieta.py 2>&1
+Saída
+
+Saved OK — rows in food table: 153
