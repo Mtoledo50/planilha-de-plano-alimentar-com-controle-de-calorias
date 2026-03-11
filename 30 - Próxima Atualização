@@ -1,0 +1,163 @@
+# Comando : 
+a planilha Plano do Dia, deve ter a seguinte divisão: 
+Café da Manhã - 8:00hs, 
+Lanche - 10:00hs, 
+Almoço - 15:00hs, 
+café da tarde - 18:00 hs  
+jantar - 20:30, 
+
+o cardápio poderá ser alterado através de dropdown em cada celula de cada alimento, 
+a planilha deverá ter divisões por dia da semana com repetições a cada dois dias com cardápios iguais, 
+por exemplo, segunda - quarta e sexta é o mesmo cardápio 
+terça, quinta e sábado também deverá ser o mesmo cardápio 
+no domingo o cardápio muda. 
+o cardápio de segunda-feira será: 
+Café da Manhã:
+Café sem açúcar - 200ml
+Pão FrancÊs 60gr
+Requeijão 15gr
+Quaijo mussarela 20GR
+Banana 70Gr
+creatina 6gr
+
+Lanche:
+Yopro 15g High Protein 1 unid.
+
+ALmoço: 
+Batata- inglesa  assada 150Gr
+Feijão preto 120gr
+Moranga cozida 100gr
+Sobrecoxa de frango 150gr
+melancia 150gr
+
+CAfé da tarde:
+CAfé sem açucar 200ml
+pao frances 60gr
+file de frango 50gr
+melao 150gr
+
+jantar:
+arroz branco cozido 140gr
+feijão preto cozido 120gr
+file de frango grelhado 140gr
+melao 150gr
+
+Sugestão de substituição do jantar:
+suco de laranja 200ml
+tapioca de goma 30gr
+ovo de galinha 2 unid.
+queijo mussarela 20gr
+file de frango 80gr
+
+o cardáprio de terça feira:
+café da manha:
+Café sem açúcar - 200ml
+Pão FrancÊs 60gr
+Requeijão 15gr
+Queijo mussarela 20GR
+peito de peru 1 fatia
+maça 120Gr
+creatina 6gr
+
+Lanche:
+Yopro 15g High Protein 1 unid.
+
+ALmoço: 
+arroz branco cozido 140gr
+pate de ricota 20gr
+requeijão 40gr
+file de frango 170gr
+laranja 150gr
+
+como substituição de alimentos no almoço:
+pure de batata - preparo caseiro, leite integral e manteiga 150gr
+moranga cozida 100gr
+peixe grelhado 200gr
+outros legumes cozidos 2 porções
+bombom ouro branco 1 uni. 
+
+CAfé da tarde:
+Leite de vaca 200 ml
+banana 60 gr
+whey protein 2 scoop
+
+jantar:
+coca cola light 350ml
+pao de hamburguer 70gr
+queijo mussarela 25gr
+requeijão 
+bife grelhado de contra filé 150gr
+alface crespa 10gr
+tomate 10gr 
+catchup 2 colher de sobremesa
+
+Sugestão de substituição do jantar:
+macarrão cozido 150gr
+carne bovina patinho grelhado 140gr
+molho de tomate 100gr
+laranja 140gr
+
+colocar em uma planilha separada uma planilha para fazer a substituição de alimentos com as seguintes divisões : carboidratos (almoço / jantar), frutas, pães, proteinas, com os devidos alimentos em cada categoria: 
+carboidratos: 
+aipim cozido
+arros branco cozido
+arroz integral cozido
+batata doce assada/ cozida
+batata inglesa assada
+batata inglesa cozida
+cuzcuz de milho cozido
+macarrão cozido
+macarrão integral cozido
+moranga cozida
+polenta cozida
+
+frutas:
+abacate
+abacaxi
+ameixa
+banana
+bergamota
+caqui
+caqui chocolate
+carambola
+goiaba
+kiwi
+laranja
+maçã
+mamão
+manga
+melancia
+melao
+morango
+pera
+pessego
+pitaia
+uva italia
+
+pães:
+
+pão integral
+torrada integral bauducco
+torrada magic toast integral
+
+proteinas:
+alcatra grelhada
+alcatra suina assada
+atum enlatado ao natural sem oleo
+camarao cozido
+camarao grelhado
+carne bovina patinho 
+figado bovino
+lombo suino assado
+lombo suino cozido
+moela da galinha cozida
+ovo de galinha 
+paleta bovina
+peito de galinha assado
+peito de galinha cozido
+peixe assado
+peixe grelhado
+pernil suino assado
+salmao cozido/assado
+
+todos esses alimentos deverão ter sua tabela de gramas e calorias que deverão aparecer em uma tabela de resultado para comparar a substituição de acordo com a sua categoria.
