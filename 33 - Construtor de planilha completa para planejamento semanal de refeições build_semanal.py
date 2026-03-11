@@ -1,0 +1,580 @@
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+def F(h): return PatternFill("solid", start_color=h, fgColor=h)
+def ft(sz=10, bold=False, color="212121", italic=False):
+    return Font(name="Calibri", size=sz, bold=bold, color=color, italic=italic)
+def al(h="center", v="center", wrap=False):
+    return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+def sd(st="thin", c="BDBDBD"): return Side(style=st, color=c)
+def bdr(t="thin", c="BDBDBD"):
+    s=sd(t,c); return Border(left=s,right=s,top=s,bottom=s)
+def bdr_med():
+    s=sd("medium","37474F")
+    return Border(left=s,right=s,top=s,bottom=s)
+BDR = bdr()
+
+C = dict(
+    cafe_dark="4E342E",   cafe_light="EFEBE9",
+    lanche_dark="E65100", lanche_light="FFF3E0",
+    almoco_dark="1B5E20", almoco_light="E8F5E9",
+    tarde_dark="0D47A1",  tarde_light="E3F2FD",
+    jantar_dark="311B92", jantar_light="EDE7F6",
+    sub_dark="546E7A",    sub_light="ECEFF1",
+    dom_dark="B71C1C",
+    branco="FFFFFF", cinza="757575", cinza_bg="FAFAFA",
+    input_am="FFFDE7", input_bor="F9A825", inp_txt="0D47A1",
+    total_dark="263238",
+)
+
+NUTRI = {
+    "Café sem açúcar":               (2,   0.3,  0.0,  0.0, 0.0),
+    "Pão francês":                   (300, 8.0, 58.6,  3.1, 2.3),
+    "Requeijão":                     (240, 7.0,  3.5, 22.0, 0.0),
+    "Requeijão light":               (152, 7.5,  3.2, 12.0, 0.0),
+    "Queijo mussarela":              (289,18.0,  2.6, 22.9, 0.0),
+    "Banana":                        (92,  1.3, 23.8,  0.1, 1.9),
+    "Creatina monohidratada":        (0,   0.0,  0.0,  0.0, 0.0),
+    "Yopro 15g High Protein":        (67,  6.7, 10.0,  0.0, 0.0),
+    "Batata inglesa assada":         (93,  2.5, 21.0,  0.1, 1.8),
+    "Feijão preto cozido":           (77,  4.5, 13.6,  0.5, 8.4),
+    "Moranga cozida":                (26,  0.7,  6.0,  0.1, 2.0),
+    "Sobrecoxa de frango grelhada":  (215,21.0,  0.0, 14.0, 0.0),
+    "Melancia":                      (33,  0.7,  8.0,  0.2, 0.3),
+    "Filé de frango grelhado":       (163,31.5,  0.0,  3.7, 0.0),
+    "Melão":                         (29,  0.7,  7.4,  0.1, 0.3),
+    "Arroz branco cozido":           (128, 2.5, 28.1,  0.2, 1.6),
+    "Suco de laranja natural":       (45,  0.7, 10.7,  0.2, 0.4),
+    "Tapioca de goma":               (354, 0.1, 87.8,  0.3, 0.2),
+    "Ovo de galinha cozido":         (146,13.3,  0.6, 10.0, 0.0),
+    "Peito de peru fatiado":         (109,17.4,  1.9,  3.6, 0.0),
+    "Maçã com casca":                (56,  0.3, 14.9,  0.1, 1.8),
+    "Patê de ricota":                (170, 8.0,  5.0, 13.0, 0.0),
+    "Laranja pera":                  (46,  0.9, 11.5,  0.1, 2.2),
+    "Purê de batata caseiro":        (102, 2.5, 17.0,  3.0, 1.5),
+    "Peixe grelhado":                (128,25.0,  0.0,  2.8, 0.0),
+    "Legumes cozidos variados":      (35,  2.0,  6.5,  0.3, 2.5),
+    "Bombom Ouro Branco":            (520, 5.0, 60.0, 28.0, 0.5),
+    "Leite de vaca integral":        (61,  3.2,  4.7,  3.2, 0.0),
+    "Whey protein":                  (374,80.0,  8.0,  4.0, 0.0),
+    "Coca-Cola Light":               (1,   0.0,  0.3,  0.0, 0.0),
+    "Pão de hambúrguer":             (280, 8.0, 50.0,  5.0, 2.0),
+    "Bife contrafilé grelhado":      (237,32.8,  0.0, 11.4, 0.0),
+    "Alface crespa":                 (11,  1.3,  1.7,  0.2, 1.8),
+    "Tomate":                        (18,  0.9,  3.5,  0.2, 1.2),
+    "Catchup":                       (100, 1.5, 24.0,  0.4, 0.8),
+    "Macarrão cozido":               (158, 4.8, 31.7,  0.8, 1.5),
+    "Carne bovina patinho grelhado": (219,35.0,  0.0,  8.5, 0.0),
+    "Molho de tomate":               (35,  1.5,  7.0,  0.3, 1.5),
+    "Aipim cozido":                  (149, 0.9, 35.3,  0.3, 1.9),
+    "Arroz integral cozido":         (124, 2.6, 25.8,  1.0, 2.7),
+    "Batata doce assada":            (118, 1.6, 27.5,  0.1, 3.0),
+    "Batata inglesa cozida":         (87,  1.9, 19.7,  0.1, 1.8),
+    "Cuscuz de milho cozido":        (127, 3.0, 27.6,  0.6, 1.8),
+    "Macarrão integral cozido":      (141, 5.2, 28.6,  1.1, 3.2),
+    "Polenta cozida":                (70,  1.6, 15.2,  0.3, 1.0),
+    "Abacate":                       (160, 1.2,  6.0, 14.7, 6.2),
+    "Abacaxi":                       (48,  0.9, 12.3,  0.1, 1.0),
+    "Ameixa":                        (55,  0.8, 13.9,  0.2, 1.7),
+    "Bergamota":                     (38,  0.7,  9.3,  0.1, 1.8),
+    "Caqui":                         (70,  0.5, 18.6,  0.2, 3.6),
+    "Caqui chocolate":               (74,  0.6, 19.5,  0.2, 3.6),
+    "Carambola":                     (31,  0.5,  7.4,  0.1, 2.8),
+    "Goiaba":                        (54,  2.6, 10.1,  0.5, 6.0),
+    "Kiwi":                          (61,  1.1, 14.7,  0.6, 3.0),
+    "Mamão papaya":                  (45,  0.5, 11.9,  0.1, 1.8),
+    "Manga":                         (64,  0.6, 16.9,  0.3, 1.4),
+    "Morango":                       (30,  0.8,  7.1,  0.3, 2.1),
+    "Pera":                          (53,  0.4, 13.6,  0.1, 3.0),
+    "Pêssego":                       (43,  1.2,  9.4,  0.1, 2.1),
+    "Pitaia":                        (60,  1.2, 13.2,  0.4, 2.9),
+    "Uva itália":                    (70,  0.9, 17.5,  0.4, 0.9),
+    "Pão integral":                  (253, 8.8, 46.7,  3.5, 5.7),
+    "Torrada integral Bauducco":     (390,11.0, 74.0,  5.5, 5.0),
+    "Torrada Magic Toast integral":  (380,11.5, 72.0,  4.8, 6.0),
+    "Alcatra grelhada":              (237,32.8,  0.0, 11.4, 0.0),
+    "Alcatra suína assada":          (245,30.0,  0.0, 14.0, 0.0),
+    "Atum enlatado ao natural":      (119,26.3,  0.0,  1.3, 0.0),
+    "Camarão cozido":                (115,24.4,  0.0,  1.5, 0.0),
+    "Camarão grelhado":              (120,25.0,  0.0,  1.8, 0.0),
+    "Fígado bovino":                 (134,22.5,  3.9,  3.8, 0.0),
+    "Lombo suíno assado":            (206,29.0,  0.0,  9.5, 0.0),
+    "Lombo suíno cozido":            (195,28.0,  0.0,  8.8, 0.0),
+    "Moela de galinha cozida":       (140,26.0,  0.0,  3.5, 0.0),
+    "Paleta bovina":                 (225,28.0,  0.0, 12.0, 0.0),
+    "Peito de galinha assado":       (163,31.5,  0.0,  3.7, 0.0),
+    "Peito de galinha cozido":       (159,32.0,  0.0,  3.2, 0.0),
+    "Peixe assado":                  (122,24.0,  0.0,  2.5, 0.0),
+    "Pernil suíno assado":           (232,27.0,  0.0, 13.0, 0.0),
+    "Salmão cozido/assado":          (246,27.3,  0.0, 15.0, 0.0),
+}
+
+SEG = {
+    "cafe":   [("Café sem açúcar",200,"200 ml"),("Pão francês",60,"1 unidade"),
+               ("Requeijão",15,"1 col. sopa"),("Queijo mussarela",20,"1 fatia"),
+               ("Banana",70,"½ unidade méd."),("Creatina monohidratada",6,"2 doses")],
+    "lanche": [("Yopro 15g High Protein",300,"1 unidade")],
+    "almoco": [("Batata inglesa assada",150,"1 unid. média"),
+               ("Feijão preto cozido",120,"1 concha"),("Moranga cozida",100,"1 porção"),
+               ("Sobrecoxa de frango grelhada",150,"1 peça s/ osso"),("Melancia",150,"1 fatia")],
+    "almoco_sub": [],
+    "tarde":  [("Café sem açúcar",200,"200 ml"),("Pão francês",60,"1 unidade"),
+               ("Filé de frango grelhado",50,"½ filé pequeno"),("Melão",150,"1 fatia")],
+    "jantar": [("Arroz branco cozido",140,"4 col. sopa"),("Feijão preto cozido",120,"1 concha"),
+               ("Filé de frango grelhado",140,"1 filé médio"),("Melão",150,"1 fatia")],
+    "jantar_sub": [("Suco de laranja natural",200,"1 copo"),("Tapioca de goma",30,"1 tapioca peq."),
+                   ("Ovo de galinha cozido",100,"2 unidades"),("Queijo mussarela",20,"1 fatia"),
+                   ("Filé de frango grelhado",80,"1 filé pequeno")],
+}
+
+TER = {
+    "cafe":   [("Café sem açúcar",200,"200 ml"),("Pão francês",60,"1 unidade"),
+               ("Requeijão",15,"1 col. sopa"),("Queijo mussarela",20,"1 fatia"),
+               ("Peito de peru fatiado",15,"1 fatia"),("Maçã com casca",120,"1 unid. média"),
+               ("Creatina monohidratada",6,"2 doses")],
+    "lanche": [("Yopro 15g High Protein",300,"1 unidade")],
+    "almoco": [("Arroz branco cozido",140,"4 col. sopa"),("Patê de ricota",20,"1 col. sopa"),
+               ("Requeijão",40,"2 col. sopa"),("Filé de frango grelhado",170,"1 filé grande"),
+               ("Laranja pera",150,"1 unidade grande")],
+    "almoco_sub": [("Purê de batata caseiro",150,"1 porção"),("Moranga cozida",100,"1 porção"),
+                   ("Peixe grelhado",200,"1 filé"),("Legumes cozidos variados",120,"2 porções"),
+                   ("Bombom Ouro Branco",16,"1 unidade")],
+    "tarde":  [("Leite de vaca integral",200,"1 copo"),("Banana",60,"½ unidade"),
+               ("Whey protein",60,"2 scoops")],
+    "jantar": [("Coca-Cola Light",350,"1 lata"),("Pão de hambúrguer",70,"1 unidade"),
+               ("Queijo mussarela",25,"1 fatia"),("Requeijão",20,"1 col. sopa"),
+               ("Bife contrafilé grelhado",150,"1 bife médio"),("Alface crespa",10,"2 folhas"),
+               ("Tomate",10,"1 rodela"),("Catchup",20,"2 col. sobremesa")],
+    "jantar_sub": [("Macarrão cozido",150,"1 porção"),
+                   ("Carne bovina patinho grelhado",140,"1 bife"),
+                   ("Molho de tomate",100,"4 col. sopa"),("Laranja pera",140,"1 unidade")],
+}
+
+DOM = {
+    "cafe":   [("Café sem açúcar",200,"200 ml"),("Pão integral",60,"2 fatias"),
+               ("Queijo mussarela",30,"2 fatias"),("Ovo de galinha cozido",50,"1 unidade"),
+               ("Maçã com casca",120,"1 unidade"),("Creatina monohidratada",6,"2 doses")],
+    "lanche": [("Yopro 15g High Protein",300,"1 unidade")],
+    "almoco": [("Arroz branco cozido",160,"4+ col. sopa"),("Feijão preto cozido",130,"1 concha grande"),
+               ("Sobrecoxa de frango grelhada",180,"1 peça"),("Moranga cozida",100,"1 porção"),
+               ("Melancia",200,"1 fatia grande")],
+    "almoco_sub": [],
+    "tarde":  [("Café sem açúcar",200,"200 ml"),("Pão francês",60,"1 unidade"),
+               ("Requeijão",15,"1 col. sopa")],
+    "jantar": [("Macarrão cozido",150,"1 porção"),("Carne bovina patinho grelhado",140,"1 bife"),
+               ("Molho de tomate",100,"4 col. sopa"),("Laranja pera",140,"1 unidade")],
+    "jantar_sub": [],
+}
+
+DIAS = [
+    ("SEG","Segunda-feira 🔵","(=Qua e Sex)",SEG,C["tarde_dark"]),
+    ("TER","Terça-feira 🟢","(=Qui e Sab)",TER,C["almoco_dark"]),
+    ("QUA","Quarta-feira 🔵","(=Seg e Sex)",SEG,C["tarde_dark"]),
+    ("QUI","Quinta-feira 🟢","(=Ter e Sab)",TER,C["almoco_dark"]),
+    ("SEX","Sexta-feira 🔵","(=Seg e Qua)",SEG,C["tarde_dark"]),
+    ("SAB","Sábado 🟢","(=Ter e Qui)",TER,C["almoco_dark"]),
+    ("DOM","Domingo 🔴","(Cardápio especial)",DOM,C["dom_dark"]),
+]
+
+REFEICOES_DEF = [
+    ("cafe",      "☕ Café da Manhã","08:00h",C["cafe_dark"],  C["cafe_light"]),
+    ("lanche",    "🍌 Lanche",       "10:00h",C["lanche_dark"],C["lanche_light"]),
+    ("almoco",    "🥗 Almoço",        "13:00h",C["almoco_dark"],C["almoco_light"]),
+    ("almoco_sub","🔄 Opção Almoço",  "",      C["sub_dark"],   C["sub_light"]),
+    ("tarde",     "☕ Café da Tarde", "18:00h",C["tarde_dark"], C["tarde_light"]),
+    ("jantar",    "🌙 Jantar",        "20:30h",C["jantar_dark"],C["jantar_light"]),
+    ("jantar_sub","🔄 Opção Jantar",  "",      C["sub_dark"],   C["sub_light"]),
+]
+
+wb = Workbook()
+
+# ── Hidden lists sheet ──────────────────────────────────────────────
+ws_lst = wb.active
+ws_lst.title = "_Listas"
+ws_lst.sheet_state = "hidden"
+ws_lst.column_dimensions["A"].width = 36
+
+food_names = sorted(NUTRI.keys())
+FSTART = 2
+for i,n in enumerate(food_names):
+    ws_lst.cell(row=FSTART+i, column=1, value=n)
+FEND = FSTART + len(food_names) - 1
+FRANGE = f"_Listas!$A${FSTART}:$A${FEND}"
+
+# Also write full nutri table starting col C for VLOOKUP
+ws_lst.cell(row=1,column=3,value="Alimento"); ws_lst.cell(row=1,column=4,value="Kcal/100g")
+ws_lst.cell(row=1,column=5,value="Prot"); ws_lst.cell(row=1,column=6,value="Carb")
+ws_lst.cell(row=1,column=7,value="Gord"); ws_lst.cell(row=1,column=8,value="Fibra")
+TBL_NAMES = sorted(NUTRI.keys())
+TSTART = 2
+for i,name in enumerate(TBL_NAMES):
+    r = TSTART+i
+    kc,pt,cb,gd,fb = NUTRI[name]
+    ws_lst.cell(row=r,column=3,value=name)
+    ws_lst.cell(row=r,column=4,value=kc)
+    ws_lst.cell(row=r,column=5,value=pt)
+    ws_lst.cell(row=r,column=6,value=cb)
+    ws_lst.cell(row=r,column=7,value=gd)
+    ws_lst.cell(row=r,column=8,value=fb)
+TEND = TSTART+len(TBL_NAMES)-1
+TBL_REF = f"_Listas!$C${TSTART}:$H${TEND}"
+
+def write_day(wb, abbrev, titulo, subtit, cardapio, day_color):
+    ws = wb.create_sheet(abbrev)
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = "C9"
+
+    cw = {"A":1.5,"B":14,"C":32,"D":11,"E":11,"F":11,"G":11,"H":11,"I":16,"J":1.5}
+    for col,w in cw.items(): ws.column_dimensions[col].width = w
+
+    # Row 1 spacer
+    ws.row_dimensions[1].height = 5
+
+    # Title
+    ws.row_dimensions[2].height = 36
+    ws.merge_cells("B2:I2")
+    c = ws["B2"]
+    c.value = f"🍽️  PLANO ALIMENTAR  ·  {titulo}  ·  {subtit}"
+    c.font = ft(13, True, "FFFFFF"); c.fill = F(day_color); c.alignment = al(); c.border = BDR
+
+    # Instructions
+    ws.row_dimensions[3].height = 16
+    ws.merge_cells("B3:I3")
+    c = ws["B3"]
+    c.value = "  ▼ Clique na seta ▼ em cada alimento para trocar  ·  Edite a porção (g) para recalcular as calorias automaticamente"
+    c.font = ft(8, italic=True, color="546E7A"); c.fill = F("ECEFF1"); c.alignment = al("left"); c.border = BDR
+
+    # Config row
+    ws.row_dimensions[4].height = 24
+    for col,val,bg,bl in [(2,"Meta Kcal/dia:","ECEFF1",False),(3,2000,"FFFDE7",True),
+                           (4,"Peso (kg):","ECEFF1",False),(5,70,"FFFDE7",True),
+                           (6,"Objetivo:","ECEFF1",False),(7,"Emagrecimento","FFFDE7",True)]:
+        c=ws.cell(row=4,column=col,value=val)
+        c.font=ft(9,bl,"0D47A1" if bl else "546E7A")
+        c.fill=F(bg); c.border=BDR
+        c.alignment=al("right" if not bl else "center")
+
+    ws.row_dimensions[5].height = 6
+
+    # Column headers
+    ws.row_dimensions[6].height = 40
+    for col,h,bg in [
+        (2,"Refeição / Horário","263238"),(3,"Alimento  ▼","263238"),
+        (4,"Porção\n(g)","1565C0"),(5,"Kcal","B71C1C"),
+        (6,"Prot.\n(g)","1565C0"),(7,"Carb.\n(g)","E65100"),
+        (8,"Gord.\n(g)","5D4037"),(9,"Medida caseira","263238"),
+    ]:
+        c=ws.cell(row=6,column=col,value=h)
+        c.font=ft(9,True,"FFFFFF"); c.fill=F(bg)
+        c.alignment=al("center","center",wrap=True); c.border=BDR
+
+    ws.row_dimensions[7].height = 5
+
+    row = 8
+    food_cells = []
+    meal_ranges = {}
+
+    for ref_key,ref_nome,hora,dark,light in REFEICOES_DEF:
+        items = cardapio.get(ref_key,[])
+        if not items: continue
+
+        is_sub = ref_key.endswith("_sub")
+
+        # Section header
+        ws.row_dimensions[row].height = 24 if not is_sub else 20
+        ws.merge_cells(f"B{row}:I{row}")
+        label = f"  {ref_nome}  {hora}" if hora else f"  {ref_nome}  (alternativa)"
+        c = ws.cell(row=row, column=2, value=label)
+        c.font = ft(10 if not is_sub else 9, True, "FFFFFF")
+        c.fill = F(dark); c.alignment = al("left"); c.border = BDR
+        row += 1
+
+        meal_start = row
+        for idx,(alimento,gramas,medida) in enumerate(items):
+            ws.row_dimensions[row].height = 20
+            ab = light if idx%2==0 else "FFFFFF"
+
+            # Col B: refeição label
+            c=ws.cell(row=row,column=2,value=ref_nome if idx==0 else "")
+            c.font=ft(8,False,"FFFFFF" if idx==0 else "BDBDBD")
+            c.fill=F(dark if idx==0 else light); c.border=BDR
+            c.alignment=al("center","center",wrap=True)
+
+            # Col C: alimento (dropdown input)
+            c=ws.cell(row=row,column=3,value=alimento)
+            c.font=ft(10,True,C["inp_txt"]); c.fill=F(C["input_am"])
+            c.border=bdr("thin",C["input_bor"]); c.alignment=al("left","center")
+            food_cells.append(f"C{row}")
+
+            # Col D: porção
+            c=ws.cell(row=row,column=4,value=gramas)
+            c.font=ft(10,True,C["inp_txt"]); c.fill=F(C["input_am"])
+            c.border=bdr("thin",C["input_bor"]); c.alignment=al("right","center")
+            c.number_format="0.0"
+
+            # Cols E-H: VLOOKUP formulas
+            for col_f,off in [(5,2),(6,3),(7,4),(8,5)]:
+                f=f"=IFERROR(VLOOKUP(C{row},{TBL_REF},{off},0)*D{row}/100,0)"
+                c=ws.cell(row=row,column=col_f,value=f)
+                c.font=ft(10); c.fill=F(ab); c.border=BDR
+                c.alignment=al("right","center"); c.number_format="0.0"
+
+            # Col I: medida caseira
+            c=ws.cell(row=row,column=9,value=medida)
+            c.font=ft(8,italic=True,color="607D8B"); c.fill=F(ab)
+            c.border=BDR; c.alignment=al("left","center")
+            row += 1
+
+        meal_ranges[ref_key] = (meal_start, row-1)
+
+        # Subtotal for main meals
+        if not is_sub:
+            ws.row_dimensions[row].height = 18
+            ws.merge_cells(f"B{row}:C{row}")
+            c=ws.cell(row=row,column=2,value=f"Subtotal {ref_nome}")
+            c.font=ft(8,True,"FFFFFF"); c.fill=F(dark); c.border=BDR; c.alignment=al("right")
+            for cf,let in [(4,"D"),(5,"E"),(6,"F"),(7,"G"),(8,"H")]:
+                c=ws.cell(row=row,column=cf,value=f"=SUM({let}{meal_start}:{let}{row-1})")
+                c.font=ft(9,True,"FFFFFF"); c.fill=F(dark); c.border=BDR
+                c.alignment=al("right"); c.number_format="0.0"
+            c=ws.cell(row=row,column=9); c.fill=F(dark); c.border=BDR
+            row += 1
+
+        ws.row_dimensions[row].height=4; row+=1
+
+    # Grand total
+    ws.row_dimensions[row].height = 32
+    ws.merge_cells(f"B{row}:C{row}")
+    c=ws.cell(row=row,column=2,value="📊 TOTAL DO DIA")
+    c.font=ft(12,True,"FFFFFF"); c.fill=F("263238"); c.border=bdr_med(); c.alignment=al("center")
+
+    main_keys=[k for k,_,_,_,_ in REFEICOES_DEF if not k.endswith("_sub")]
+    for cf,let in [(4,"D"),(5,"E"),(6,"F"),(7,"G"),(8,"H")]:
+        ranges=[f"{let}{s}:{let}{e}" for k,(s,e) in meal_ranges.items() if not k.endswith("_sub")]
+        f="=SUM("+",".join(ranges)+")" if ranges else "0"
+        c=ws.cell(row=row,column=cf,value=f)
+        c.font=ft(11,True,"FFFFFF"); c.fill=F("263238"); c.border=bdr_med()
+        c.alignment=al("right"); c.number_format="0.0"
+    c=ws.cell(row=row,column=9); c.fill=F("263238"); c.border=bdr_med()
+
+    tot_row=row; row+=1
+
+    # Status
+    ws.row_dimensions[row].height=22
+    ws.merge_cells(f"B{row}:C{row}")
+    c=ws.cell(row=row,column=2,value="🎯 Status calórico:")
+    c.font=ft(9,True); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("right")
+    ws.merge_cells(f"D{row}:I{row}")
+    c=ws.cell(row=row,column=4,
+        value=f'=IF(E{tot_row}<C4*0.9,"⚠️ Abaixo da meta",IF(E{tot_row}<=C4,"✅ Na meta",IF(E{tot_row}<=C4*1.1,"🟡 Ligeiramente acima","🔴 Acima da meta")))')
+    c.font=ft(10,True); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("center")
+    row+=2
+
+    # Per-meal summary table
+    ws.row_dimensions[row].height=26
+    ws.merge_cells(f"B{row}:I{row}")
+    c=ws.cell(row=row,column=2,value="  📊 RESUMO POR REFEIÇÃO")
+    c.font=ft(10,True,"FFFFFF"); c.fill=F("37474F"); c.alignment=al("left"); c.border=BDR
+    row+=1
+
+    ws.row_dimensions[row].height=32
+    for col,h,bg in [(2,"Refeição","37474F"),(3,"Kcal","B71C1C"),(4,"% do total","B71C1C"),
+                     (5,"Prot.","1565C0"),(6,"Carb.","E65100"),(7,"Gord.","5D4037"),(8,"Horário","37474F")]:
+        c=ws.cell(row=row,column=col,value=h)
+        c.font=ft(9,True,"FFFFFF"); c.fill=F(bg)
+        c.alignment=al("center","center",wrap=True); c.border=BDR
+    ws.cell(row=row,column=9).fill=F("37474F"); ws.cell(row=row,column=9).border=BDR
+    row+=1
+
+    for ref_key,ref_nome,hora,dark,light in REFEICOES_DEF:
+        if ref_key.endswith("_sub") or ref_key not in meal_ranges: continue
+        ms,me = meal_ranges[ref_key]
+        if ms>me: continue
+        ws.row_dimensions[row].height=20
+        ab2=light if list(meal_ranges.keys()).index(ref_key)%2==0 else "FFFFFF"
+        c=ws.cell(row=row,column=2,value=ref_nome)
+        c.font=ft(9,True,"FFFFFF"); c.fill=F(dark); c.border=BDR; c.alignment=al("left")
+        c=ws.cell(row=row,column=3,value=f"=SUM(E{ms}:E{me})")
+        c.font=ft(9,True); c.fill=F(ab2); c.border=BDR; c.alignment=al("right"); c.number_format="0.0"
+        c=ws.cell(row=row,column=4,value=f"=IFERROR(C{row}/E{tot_row},0)")
+        c.font=ft(9); c.fill=F(ab2); c.border=BDR; c.alignment=al("right"); c.number_format="0.0%"
+        for cf,let in [(5,"F"),(6,"G"),(7,"H")]:
+            c=ws.cell(row=row,column=cf,value=f"=SUM({let}{ms}:{let}{me})")
+            c.font=ft(9); c.fill=F(ab2); c.border=BDR; c.alignment=al("right"); c.number_format="0.0"
+        c=ws.cell(row=row,column=8,value=hora)
+        c.font=ft(9); c.fill=F(ab2); c.border=BDR; c.alignment=al("center")
+        c=ws.cell(row=row,column=9); c.fill=F(ab2); c.border=BDR
+        row+=1
+
+    # Add dropdowns
+    if food_cells:
+        dv=DataValidation(type="list",formula1=FRANGE,allow_blank=True,
+                          showDropDown=False,showErrorMessage=False,
+                          showInputMessage=True,
+                          promptTitle="🍽️ Trocar alimento",
+                          prompt="Clique ▼ para ver todos os alimentos e escolher uma substituição.")
+        dv.sqref=" ".join(food_cells)
+        ws.add_data_validation(dv)
+
+    print(f"  {abbrev}: {len(food_cells)} dropdowns, last_row={row}")
+
+for abbrev,titulo,subtit,cardapio,day_color in DIAS:
+    write_day(wb, abbrev, titulo, subtit, cardapio, day_color)
+
+# ── Substituição sheet ──────────────────────────────────────────────
+ws_s = wb.create_sheet("🔄 Substituição")
+ws_s.sheet_view.showGridLines = False
+for col,w in [("A",1.5),("B",30),("C",11),("D",11),("E",11),("F",11),("G",11),("H",14),("I",1.5)]:
+    ws_s.column_dimensions[col].width = w
+
+ws_s.row_dimensions[1].height=5
+ws_s.row_dimensions[2].height=34
+ws_s.merge_cells("B2:H2")
+c=ws_s["B2"]; c.value="🔄  TABELA DE SUBSTITUIÇÃO DE ALIMENTOS — Valores por 100g  (Fonte: TACO/IBGE)"
+c.font=ft(13,True,"FFFFFF"); c.fill=F("263238"); c.alignment=al(); c.border=BDR
+
+ws_s.row_dimensions[3].height=18
+ws_s.merge_cells("B3:H3")
+c=ws_s["B3"]
+c.value="  Compare alimentos da mesma categoria. Use a CALCULADORA abaixo para ver as calorias de qualquer porção antes de substituir."
+c.font=ft(9,italic=True,color="455A64"); c.fill=F("ECEFF1"); c.alignment=al("left"); c.border=BDR
+
+# Calculadora
+ws_s.row_dimensions[4].height=8
+ws_s.row_dimensions[5].height=26
+ws_s.merge_cells("B5:H5")
+c=ws_s["B5"]; c.value="  🧮 CALCULADORA DE SUBSTITUIÇÃO — Compare dois alimentos em qualquer porção"
+c.font=ft(10,True,"FFFFFF"); c.fill=F("1565C0"); c.alignment=al("left"); c.border=BDR
+
+for rr,label_txt,col_val,bg_v,note in [
+    (6,"Alimento A (original):",3,"FFF9C4","▼ escolha"),
+    (7,"Alimento B (substituto):",3,"E8F5E9","▼ escolha"),
+]:
+    ws_s.row_dimensions[rr].height=22
+    c=ws_s.cell(row=rr,column=2,value=label_txt)
+    c.font=ft(9,True,"546E7A"); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("right")
+    # food dropdown cell
+    ws_s.merge_cells(f"C{rr}:D{rr}")
+    c=ws_s.cell(row=rr,column=3,value=note)
+    c.font=ft(10,True,"0D47A1"); c.fill=F(bg_v); c.border=bdr("thin","F9A825"); c.alignment=al("center")
+    # porção
+    c=ws_s.cell(row=rr,column=5,value=100)
+    c.font=ft(10,True,"0D47A1"); c.fill=F("FFFDE7"); c.border=bdr("thin","F9A825")
+    c.alignment=al("center"); c.number_format='0 "g"'
+    c=ws_s.cell(row=rr,column=6,value="(g)")
+    c.font=ft(8,color="9E9E9E"); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("left")
+    # result
+    off=2  # kcal offset in TBL_REF
+    c=ws_s.cell(row=rr,column=7,value=f"=IFERROR(VLOOKUP(C{rr},{TBL_REF},{off},0)*E{rr}/100,0)")
+    c.font=ft(11,True,"B71C1C"); c.fill=F("FFEBEE"); c.border=BDR
+    c.alignment=al("right"); c.number_format='0.0 "kcal"'
+    ws_s.merge_cells(f"G{rr}:H{rr}")
+
+# Dropdown for calculadora
+for coord in ["C6","C7"]:
+    dv2=DataValidation(type="list",formula1=FRANGE,allow_blank=True,
+                       showDropDown=False,promptTitle="Selecionar alimento",
+                       prompt="▼ Escolha da lista completa")
+    dv2.add(ws_s[coord]); ws_s.add_data_validation(dv2)
+
+# Difference row
+ws_s.row_dimensions[8].height=20
+ws_s.merge_cells("B8:F8")
+c=ws_s["B8"]; c.value="  Diferença calórica A → B:"
+c.font=ft(9,True,"546E7A"); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("right")
+c=ws_s["G8"]
+c.value="=IFERROR(G7-G6,0)"
+c.font=ft(11,True,"2E7D32"); c.fill=F("E8F5E9"); c.border=BDR
+c.alignment=al("right"); c.number_format='0.0 "kcal"'
+ws_s.merge_cells("G8:H8")
+ws_s.row_dimensions[9].height=8
+
+# Category tables
+SUB_CATS = [
+    ("🌾 Carboidratos  (Almoço / Jantar)","E65100","FFF3E0",[
+        "Aipim cozido","Arroz branco cozido","Arroz integral cozido",
+        "Batata doce assada","Batata inglesa assada","Batata inglesa cozida",
+        "Cuscuz de milho cozido","Macarrão cozido","Macarrão integral cozido",
+        "Moranga cozida","Polenta cozida",
+    ]),
+    ("🍎 Frutas","E91E63","FCE4EC",[
+        "Abacate","Abacaxi","Ameixa","Banana","Bergamota","Caqui","Caqui chocolate",
+        "Carambola","Goiaba","Kiwi","Laranja pera","Maçã com casca","Mamão papaya",
+        "Manga","Melancia","Melão","Morango","Pera","Pêssego","Pitaia","Uva itália",
+    ]),
+    ("🍞 Pães e Torradas","795548","EFEBE9",[
+        "Pão francês","Pão integral","Pão de hambúrguer",
+        "Torrada integral Bauducco","Torrada Magic Toast integral","Tapioca de goma",
+    ]),
+    ("🥩 Proteínas","B71C1C","FFEBEE",[
+        "Alcatra grelhada","Alcatra suína assada","Atum enlatado ao natural",
+        "Bife contrafilé grelhado","Camarão cozido","Camarão grelhado",
+        "Carne bovina patinho grelhado","Fígado bovino","Filé de frango grelhado",
+        "Lombo suíno assado","Lombo suíno cozido","Moela de galinha cozida",
+        "Ovo de galinha cozido","Paleta bovina","Peito de galinha assado",
+        "Peito de galinha cozido","Peixe assado","Peixe grelhado",
+        "Pernil suíno assado","Salmão cozido/assado","Sobrecoxa de frango grelhada",
+    ]),
+]
+
+sr = 10
+for cat_name, dark, light, items in SUB_CATS:
+    # Category title
+    ws_s.row_dimensions[sr].height=28
+    ws_s.merge_cells(f"B{sr}:H{sr}")
+    c=ws_s.cell(row=sr,column=2,value=f"  {cat_name}")
+    c.font=ft(12,True,"FFFFFF"); c.fill=F(dark); c.alignment=al("left"); c.border=BDR
+    sr+=1
+
+    # Column headers
+    ws_s.row_dimensions[sr].height=36
+    for col,h,bg_h in [(2,"Alimento",dark),(3,"Kcal\n/100g","B71C1C"),
+                        (4,"Prot.\n(g)","1565C0"),(5,"Carb.\n(g)","E65100"),
+                        (6,"Gord.\n(g)","5D4037"),(7,"Fibra\n(g)","2E7D32"),
+                        (8,"Kcal p/ porção →","9C27B0")]:
+        c=ws_s.cell(row=sr,column=col,value=h)
+        c.font=ft(9,True,"FFFFFF"); c.fill=F(bg_h)
+        c.alignment=al("center","center",wrap=True); c.border=BDR
+    sr+=1
+
+    # Porção reference input
+    ws_s.row_dimensions[sr].height=22
+    c=ws_s.cell(row=sr,column=2,value="  Digite a porção desejada (g) →")
+    c.font=ft(9,True,"546E7A"); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("right")
+    prow=sr
+    ws_s.merge_cells(f"C{sr}:G{sr}")
+    c=ws_s.cell(row=sr,column=3,value=100)
+    c.font=ft(11,True,"0D47A1"); c.fill=F("FFFDE7")
+    c.border=bdr("thin","F9A825"); c.alignment=al("center"); c.number_format='0 "g"'
+    c=ws_s.cell(row=sr,column=8)
+    c.value="← edite a porção"; c.font=ft(8,italic=True,color="9C27B0")
+    c.fill=F("F3E5F5"); c.border=BDR; c.alignment=al("center")
+    sr+=1
+
+    # Data rows
+    for j,nome in enumerate(items):
+        ws_s.row_dimensions[sr].height=19
+        ab=light if j%2==0 else "FFFFFF"
+        nutri=NUTRI.get(nome,(0,0,0,0,0))
+        kc,pt,cb,gd,fb=nutri
+        c=ws_s.cell(row=sr,column=2,value=nome)
+        c.font=ft(10); c.fill=F(ab); c.border=BDR; c.alignment=al("left","center")
+        for ci,val in [(3,kc),(4,pt),(5,cb),(6,gd),(7,fb)]:
+            c=ws_s.cell(row=sr,column=ci,value=val)
+            c.font=ft(10); c.fill=F(ab); c.border=BDR
+            c.alignment=al("right","center"); c.number_format="0.0"
+        # Kcal p/ porção formula
+        c=ws_s.cell(row=sr,column=8,value=f"=IFERROR(C{sr}*C{prow}/100,0)")
+        c.font=ft(10,True,"4A148C"); c.fill=F("F3E5F5"); c.border=BDR
+        c.alignment=al("right","center"); c.number_format='0.0 "kcal"'
+        sr+=1
+
+    ws_s.row_dimensions[sr].height=8; sr+=1
+
+print(f"Substituição: {sr} rows")
+
+wb.active = wb["SEG"]
+wb.save("/home/claude/plano_semanal.xlsx")
+print("✅ Done")
