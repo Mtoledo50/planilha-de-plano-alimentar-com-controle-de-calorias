@@ -1,0 +1,30 @@
+bash
+
+cd /home/claude && python update_dieta.py 2>&1
+Saída
+
+Existing foods: 136
+Foods to add: 5: ['Requeijão light', 'Peito de peru fatiado', 'Maçã sem casca', 'Café com leite desnatado', 'Leite de soja sem açúcar']
+Category last rows: {'🌾 Carboidratos / Cer': 21, '🥩 Proteínas Animais ': 35, '🫘 Proteínas Vegetais': 45, '🥛 Laticínios e Ovos': 55, '🥗 Saladas e Folhosos': 72, '🥦 Legumes e Verduras': 86, '🍎 Frutas': 103, '💧 Bebidas': 117, '🥜 Oleaginosas, Semen': 131, '🍫 Suplementos e Func': 141, '🍽️ Temperos e Condim': 153}
+  Added 'Café com leite desnatado' at row 118
+  Added 'Leite de soja sem açúcar' at row 119
+  Added 'Maçã sem casca' at row 104
+  Added 'Requeijão light' at row 56
+  Added 'Peito de peru fatiado' at row 36
+
+Total foods in table after update: 131
+Food list range: '🔧 Listas'!$A$2:$A$132
+
+New breakfast rows: 9 to 16
+Renumbered 30 food rows
+Food cells to get dropdown: 30
+Sample: ['C9', 'C10', 'C11', 'C12', 'C13']
+Dropdown applied to 30 cells
+
+Meal food rows (first/last):
+Total row: 45, Summary start: 50
+Traceback (most recent call last):
+  File "/home/claude/update_dieta.py", line 370, in <module>
+    first_food = min(min(rows) for rows in meal_food_rows.values() if rows)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: min() iterable argument is empty
