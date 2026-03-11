@@ -1,0 +1,57 @@
+bash
+
+cd /home/claude && python3 -c "
+from openpyxl import load_workbook
+wb = load_workbook('plano_alimentar.xlsx')
+ws2 = wb['🍽️ Plano do Dia']
+# Check all rows with content 
+for row in ws2.iter_rows(min_row=8, max_row=60, min_col=2, max_col=5):
+    b,c,d,e = row[0],row[1],row[2],row[3]
+    if b.value:
+        print(f'  R{b.row}: B={repr(str(b.value)[:30])} C={repr(str(c.value)[:25] if c.value else None)} D={repr(str(d.value)[:20] if d.value else None)}')
+" 2>&1
+Saída
+
+  R8: B='  ☀️ Café da Manhã' C=None D=None
+  R9: B='1' C='Aveia em flocos' D='☀️ Café da Manhã'
+  R10: B='2' C='Banana nanica' D='☀️ Café da Manhã'
+  R11: B='3' C='Iogurte grego natural' D='☀️ Café da Manhã'
+  R12: B='4' C='Mel' D='☀️ Café da Manhã'
+  R13: B='5' C='Café sem açúcar' D='☀️ Café da Manhã'
+  R14: B='  🍌 Lanche da Manhã' C=None D=None
+  R15: B='6' C='Maçã com casca' D='🍌 Lanche da Manhã'
+  R16: B='7' C='Pasta de amendoim integra' D='🍌 Lanche da Manhã'
+  R17: B='  🥃 Almoço' C=None D=None
+  R18: B='8' C='Arroz integral cozido' D='🥃 Almoço'
+  R19: B='9' C='Feijão carioca cozido' D='🥃 Almoço'
+  R20: B='10' C='Frango filé grelhado' D='🥃 Almoço'
+  R21: B='11' C='Brócolis cozido' D='🥃 Almoço'
+  R22: B='12' C='Cenoura crua' D='🥃 Almoço'
+  R23: B='13' C='Azeite de oliva extra vir' D='🥃 Almoço'
+  R24: B='14' C='Laranja pera' D='🥃 Almoço'
+  R25: B='  🍵 Lanche da Tarde' C=None D=None
+  R26: B='15' C='Pão integral' D='🍵 Lanche da Tarde'
+  R27: B='16' C='Queijo cottage' D='🍵 Lanche da Tarde'
+  R28: B='17' C='Morango' D='🍵 Lanche da Tarde'
+  R29: B='18' C='Chá verde (infusão)' D='🍵 Lanche da Tarde'
+  R30: B='  🌙 Jantar' C=None D=None
+  R31: B='19' C='Tilápia grelhada' D='🌙 Jantar'
+  R32: B='20' C='Batata doce cozida' D='🌙 Jantar'
+  R33: B='21' C='Abobrinha cozida' D='🌙 Jantar'
+  R34: B='22' C='Espinafre cru' D='🌙 Jantar'
+  R35: B='23' C='Tomate cru' D='🌙 Jantar'
+  R36: B='24' C='Azeite de oliva extra vir' D='🌙 Jantar'
+  R37: B='  🌛 Ceia' C=None D=None
+  R38: B='25' C='Iogurte grego natural' D='🌛 Ceia'
+  R39: B='26' C='Semente de chia' D='🌛 Ceia'
+  R40: B='27' C='Castanha-do-Pará' D='🌛 Ceia'
+  R42: B='📊 TOTAL DO DIA' C=None D=None
+  R43: B='🎯 STATUS vs. META' C=None D=None
+  R45: B='  📊 CALORIAS POR REFEIÇÃO' C=None D=None
+  R46: B='Refeição' C=None D='Calorias (kcal)'
+  R47: B='☀️ Café da Manhã' C=None D='=SUM(F9:F13)'
+  R48: B='🍌 Lanche da Manhã' C=None D='=SUM(F15:F16)'
+  R49: B='🥃 Almoço' C=None D='=SUM(F18:F24)'
+  R50: B='🍵 Lanche da Tarde' C=None D='=SUM(F26:F29)'
+  R51: B='🌙 Jantar' C=None D='=SUM(F31:F36)'
+  R52: B='🌛 Ceia' C=None D='=SUM(F38:F40)'
