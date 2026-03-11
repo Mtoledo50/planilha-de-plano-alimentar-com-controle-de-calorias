@@ -1,0 +1,6 @@
+bash
+
+cp /home/claude/plano_alimentar.xlsx /mnt/user-data/outputs/plano_alimentar_calorias.xlsx
+Saída
+
+exit code 0
