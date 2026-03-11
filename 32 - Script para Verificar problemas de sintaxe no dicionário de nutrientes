@@ -1,0 +1,147 @@
+bash
+
+cat << 'PYEOF' > /home/claude/build_semana.py
+from openpyxl import load_workbook, Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+# ─── Helpers ──────────────────────────────────────────────────────────
+def F(h): return PatternFill("solid", start_color=h, fgColor=h)
+def ft(sz=10, bold=False, color="212121", italic=False):
+    return Font(name="Calibri", size=sz, bold=bold, color=color, italic=italic)
+def al(h="center", v="center", wrap=False):
+    return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+def sd(st="thin", c="BDBDBD"): return Side(style=st, color=c)
+def bdr(t="thin", c="BDBDBD"):
+    s=sd(t,c); return Border(left=s,right=s,top=s,bottom=s)
+def bdr2():
+    return Border(left=sd("medium","424242"),right=sd("medium","424242"),
+                  top=sd("medium","424242"),bottom=sd("medium","424242"))
+
+BDR = bdr()
+
+# ─── Colors ───────────────────────────────────────────────────────────
+C = dict(
+    cafe_dark="5D4037", cafe_light="EFEBE9", cafe_bg="FBF8F6",
+    lanche_dark="F57F17", lanche_light="FFF8E1", lanche_bg="FFFDE7",
+    almoco_dark="2E7D32", almoco_light="E8F5E9", almoco_bg="F1F8E9",
+    tarde_dark="1565C0", tarde_light="E3F2FD", tarde_bg="EBF5FE",
+    jantar_dark="4A148C", jantar_light="F3E5F5", jantar_bg="F8F0FB",
+    sub_dark="607D8B",   sub_light="ECEFF1", sub_bg="F5F7F8",
+    seg_dark="1A237E",   ter_dark="004D40",  dom_dark="B71C1C",
+    total_dark="212121", total_light="F5F5F5",
+    branco="FFFFFF", cinza="757575", cinza_cla="EEEEEE", cinza_bg="FAFAFA",
+    input_am="FFFDE7",  input_bor="F9A825", input_azul="1A237E",
+    green="43A047", red="E53935",
+)
+
+# ─── Nutritional DB (kcal per 100g) — TACO/IBGE ───────────────────────
+NUTRI = {
+    # name: (kcal, prot, carb, gord, fibra)
+    "Café sem açúcar":               (2,   0.3,  0.0, 0.0, 0.0),
+    "Pão francês":                   (300, 8.0, 58.6, 3.1, 2.3),
+    "Requeijão":                     (240, 7.0,  3.5,22.0, 0.0),
+    "Requeijão light":               (152, 7.5,  3.2,12.0, 0.0),
+    "Queijo mussarela":              (289,18.0,  2.6,22.9, 0.0),
+    "Banana":                        (92,  1.3, 23.8, 0.1, 1.9),
+    "Banana nanica":                 (92,  1.3, 23.8, 0.1, 1.9),
+    "Creatina monohidratada":        (0,   0.0,  0.0, 0.0, 0.0),
+    "Yopro 15g High Protein":        (67,  6.7, 10.0, 0.0, 0.0),
+    "Batata inglesa assada":         (93,  2.5, 21.0, 0.1, 1.8),
+    "Batata inglesa cozida":         (87,  1.9, 19.7, 0.1, 1.8),
+    "Feijão preto cozido":           (77,  4.5, 13.6, 0.5, 8.4),
+    "Moranga cozida":                (26,  0.7,  6.0, 0.1, 2.0),
+    "Sobrecoxa de frango grelhada":  (215,21.0,  0.0,14.0, 0.0),
+    "Melancia":                      (33,  0.7,  8.0, 0.2, 0.3),
+    "Filé de frango grelhado":       (163,31.5,  0.0, 3.7, 0.0),
+    "Melão":                         (29,  0.7,  7.4, 0.1, 0.3),
+    "Arroz branco cozido":           (128, 2.5, 28.1, 0.2, 1.6),
+    "Suco de laranja natural":       (45,  0.7, 10.7, 0.2, 0.4),
+    "Tapioca de goma":               (354, 0.1, 87.8, 0.3, 0.2),
+    "Ovo de galinha cozido":         (146,13.3,  0.6,10.0, 0.0),
+    "Peito de peru fatiado":         (109,17.4,  1.9, 3.6, 0.0),
+    "Maçã com casca":                (56,  0.3, 14.9, 0.1, 1.8),
+    "Patê de ricota":                (170, 8.0,  5.0,13.0, 0.0),
+    "Filé de frango cozido":         (159,32.0,  0.0, 3.2, 0.0),
+    "Laranja pera":                  (46,  0.9, 11.5, 0.1, 2.2),
+    "Purê de batata caseiro":        (102, 2.5, 17.0, 3.0, 1.5),
+    "Peixe grelhado":                (128,25.0,  0.0, 2.8, 0.0),
+    "Legumes cozidos variados":      (35,  2.0,  6.5, 0.3, 2.5),
+    "Bombom Ouro Branco":            (520, 5.0, 60.0,28.0, 0.5),
+    "Leite de vaca integral":        (61,  3.2,  4.7, 3.2, 0.0),
+    "Whey protein":                  (374,80.0,  8.0, 4.0, 0.0),
+    "Coca-Cola Light":               (1,   0.0,  0.3, 0.0, 0.0),
+    "Pão de hambúrguer":             (280, 8.0, 50.0, 5.0, 2.0),
+    "Bife contrafilé grelhado":      (237,32.8,  0.0,11.4, 0.0),
+    "Alface crespa":                 (11,  1.3,  1.7, 0.2, 1.8),
+    "Tomate":                        (18,  0.9,  3.5, 0.2, 1.2),
+    "Catchup":                       (100, 1.5, 24.0, 0.4, 0.8),
+    "Macarrão cozido":               (158, 4.8, 31.7, 0.8, 1.5),
+    "Carne bovina patinho grelhado": (219,35.0,  0.0, 8.5, 0.0),
+    "Molho de tomate":               (35,  1.5,  7.0, 0.3, 1.5),
+    # Substituições
+    "Carboidratos":
+    # Substituição foods
+    "Aipim cozido":                  (149, 0.9, 35.3, 0.3, 1.9),
+    "Arroz integral cozido":         (124, 2.6, 25.8, 1.0, 2.7),
+    "Batata doce assada":            (118, 1.6, 27.5, 0.1, 3.0),
+    "Cuscuz de milho cozido":        (127, 3.0, 27.6, 0.6, 1.8),
+    "Macarrão integral cozido":      (141, 5.2, 28.6, 1.1, 3.2),
+    "Polenta cozida":                (70,  1.6, 15.2, 0.3, 1.0),
+    # Frutas
+    "Abacate":                       (160, 1.2,  6.0,14.7, 6.2),
+    "Abacaxi":                       (48,  0.9, 12.3, 0.1, 1.0),
+    "Ameixa":                        (55,  0.8, 13.9, 0.2, 1.7),
+    "Bergamota":                     (38,  0.7,  9.3, 0.1, 1.8),
+    "Caqui":                         (70,  0.5, 18.6, 0.2, 3.6),
+    "Caqui chocolate":               (74,  0.6, 19.5, 0.2, 3.6),
+    "Carambola":                     (31,  0.5,  7.4, 0.1, 2.8),
+    "Goiaba":                        (54,  2.6, 10.1, 0.5, 6.0),
+    "Kiwi":                          (61,  1.1, 14.7, 0.6, 3.0),
+    "Mamão papaya":                  (45,  0.5, 11.9, 0.1, 1.8),
+    "Manga":                         (64,  0.6, 16.9, 0.3, 1.4),
+    "Morango":                       (30,  0.8,  7.1, 0.3, 2.1),
+    "Pera":                          (53,  0.4, 13.6, 0.1, 3.0),
+    "Pêssego":                       (43,  1.2,  9.4, 0.1, 2.1),
+    "Pitaia":                        (60,  1.2, 13.2, 0.4, 2.9),
+    "Uva itália":                    (70,  0.9, 17.5, 0.4, 0.9),
+    # Pães
+    "Pão integral":                  (253, 8.8, 46.7, 3.5, 5.7),
+    "Torrada integral Bauducco":     (390,11.0, 74.0, 5.5, 5.0),
+    "Torrada Magic Toast integral":  (380,11.5, 72.0, 4.8, 6.0),
+    # Proteínas
+    "Alcatra grelhada":              (237,32.8,  0.0,11.4, 0.0),
+    "Alcatra suína assada":          (245,30.0,  0.0,14.0, 0.0),
+    "Atum enlatado ao natural":      (119,26.3,  0.0, 1.3, 0.0),
+    "Camarão cozido":                (115,24.4,  0.0, 1.5, 0.0),
+    "Camarão grelhado":              (120,25.0,  0.0, 1.8, 0.0),
+    "Fígado bovino":                 (134,22.5,  3.9, 3.8, 0.0),
+    "Lombo suíno assado":            (206,29.0,  0.0, 9.5, 0.0),
+    "Lombo suíno cozido":            (195,28.0,  0.0, 8.8, 0.0),
+    "Moela de galinha cozida":       (140,26.0,  0.0, 3.5, 0.0),
+    "Paleta bovina":                 (225,28.0,  0.0,12.0, 0.0),
+    "Peito de galinha assado":       (163,31.5,  0.0, 3.7, 0.0),
+    "Peito de galinha cozido":       (159,32.0,  0.0, 3.2, 0.0),
+    "Peixe assado":                  (122,24.0,  0.0, 2.5, 0.0),
+    "Pernil suíno assado":           (232,27.0,  0.0,13.0, 0.0),
+    "Salmão cozido/assado":          (246,27.3,  0.0,15.0, 0.0),
+    "Sobrecoxa de frango grelhada":  (215,21.0,  0.0,14.0, 0.0),
+}
+PYEOF
+echo "checking syntax..."
+python3 -c "
+x = {
+    'a': (1,2),
+    'Carboidratos':
+    'b': (3,4),
+}
+" 2>&1 || echo "syntax error found in dict - need to fix"
+Saída
+
+checking syntax...
+  File "<string>", line 5
+    'b': (3,4),
+       ^
+SyntaxError: invalid syntax
+syntax error found in dict - need to fix
