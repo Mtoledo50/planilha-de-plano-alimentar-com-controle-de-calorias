@@ -1,0 +1,69 @@
+bash
+
+cd /home/claude && python3 -c "
+from openpyxl import load_workbook
+wb = load_workbook('plano_alimentar.xlsx')
+ws2 = wb['🍽️ Plano do Dia']
+# Check one data row to understand full column structure
+for row in ws2.iter_rows(min_row=9, max_row=13, min_col=2, max_col=12):
+    for cell in row:
+        if cell.value is not None:
+            print(f'  R{cell.row}C{cell.column} ({cell.coordinate}): {repr(str(cell.value)[:60])}')
+    print()
+" 2>&1
+Saída
+
+  R9C2 (B9): '1'
+  R9C3 (C9): 'Aveia em flocos'
+  R9C4 (D9): '☀️ Café da Manhã'
+  R9C5 (E9): '40'
+  R9C6 (F9): "=IFERROR(VLOOKUP(C9,'📋 Tabela de Alimentos'!$B$7:$J$203,3,0)"
+  R9C7 (G9): "=IFERROR(VLOOKUP(C9,'📋 Tabela de Alimentos'!$B$7:$J$203,4,0)"
+  R9C8 (H9): "=IFERROR(VLOOKUP(C9,'📋 Tabela de Alimentos'!$B$7:$J$203,5,0)"
+  R9C9 (I9): "=IFERROR(VLOOKUP(C9,'📋 Tabela de Alimentos'!$B$7:$J$203,6,0)"
+  R9C10 (J9): "=IFERROR(VLOOKUP(C9,'📋 Tabela de Alimentos'!$B$7:$J$203,7,0)"
+  R9C11 (K9): '=IFERROR(F9/$F$4,0)'
+
+  R10C2 (B10): '2'
+  R10C3 (C10): 'Banana nanica'
+  R10C4 (D10): '☀️ Café da Manhã'
+  R10C5 (E10): '80'
+  R10C6 (F10): "=IFERROR(VLOOKUP(C10,'📋 Tabela de Alimentos'!$B$7:$J$203,3,0"
+  R10C7 (G10): "=IFERROR(VLOOKUP(C10,'📋 Tabela de Alimentos'!$B$7:$J$203,4,0"
+  R10C8 (H10): "=IFERROR(VLOOKUP(C10,'📋 Tabela de Alimentos'!$B$7:$J$203,5,0"
+  R10C9 (I10): "=IFERROR(VLOOKUP(C10,'📋 Tabela de Alimentos'!$B$7:$J$203,6,0"
+  R10C10 (J10): "=IFERROR(VLOOKUP(C10,'📋 Tabela de Alimentos'!$B$7:$J$203,7,0"
+  R10C11 (K10): '=IFERROR(F10/$F$4,0)'
+
+  R11C2 (B11): '3'
+  R11C3 (C11): 'Iogurte grego natural'
+  R11C4 (D11): '☀️ Café da Manhã'
+  R11C5 (E11): '100'
+  R11C6 (F11): "=IFERROR(VLOOKUP(C11,'📋 Tabela de Alimentos'!$B$7:$J$203,3,0"
+  R11C7 (G11): "=IFERROR(VLOOKUP(C11,'📋 Tabela de Alimentos'!$B$7:$J$203,4,0"
+  R11C8 (H11): "=IFERROR(VLOOKUP(C11,'📋 Tabela de Alimentos'!$B$7:$J$203,5,0"
+  R11C9 (I11): "=IFERROR(VLOOKUP(C11,'📋 Tabela de Alimentos'!$B$7:$J$203,6,0"
+  R11C10 (J11): "=IFERROR(VLOOKUP(C11,'📋 Tabela de Alimentos'!$B$7:$J$203,7,0"
+  R11C11 (K11): '=IFERROR(F11/$F$4,0)'
+
+  R12C2 (B12): '4'
+  R12C3 (C12): 'Mel'
+  R12C4 (D12): '☀️ Café da Manhã'
+  R12C5 (E12): '10'
+  R12C6 (F12): "=IFERROR(VLOOKUP(C12,'📋 Tabela de Alimentos'!$B$7:$J$203,3,0"
+  R12C7 (G12): "=IFERROR(VLOOKUP(C12,'📋 Tabela de Alimentos'!$B$7:$J$203,4,0"
+  R12C8 (H12): "=IFERROR(VLOOKUP(C12,'📋 Tabela de Alimentos'!$B$7:$J$203,5,0"
+  R12C9 (I12): "=IFERROR(VLOOKUP(C12,'📋 Tabela de Alimentos'!$B$7:$J$203,6,0"
+  R12C10 (J12): "=IFERROR(VLOOKUP(C12,'📋 Tabela de Alimentos'!$B$7:$J$203,7,0"
+  R12C11 (K12): '=IFERROR(F12/$F$4,0)'
+
+  R13C2 (B13): '5'
+  R13C3 (C13): 'Café sem açúcar'
+  R13C4 (D13): '☀️ Café da Manhã'
+  R13C5 (E13): '150'
+  R13C6 (F13): "=IFERROR(VLOOKUP(C13,'📋 Tabela de Alimentos'!$B$7:$J$203,3,0"
+  R13C7 (G13): "=IFERROR(VLOOKUP(C13,'📋 Tabela de Alimentos'!$B$7:$J$203,4,0"
+  R13C8 (H13): "=IFERROR(VLOOKUP(C13,'📋 Tabela de Alimentos'!$B$7:$J$203,5,0"
+  R13C9 (I13): "=IFERROR(VLOOKUP(C13,'📋 Tabela de Alimentos'!$B$7:$J$203,6,0"
+  R13C10 (J13): "=IFERROR(VLOOKUP(C13,'📋 Tabela de Alimentos'!$B$7:$J$203,7,0"
+  R13C11 (K13): '=IFERROR(F13/$F$4,0)'
