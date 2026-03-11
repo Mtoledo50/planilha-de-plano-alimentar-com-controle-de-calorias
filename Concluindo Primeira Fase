@@ -1,0 +1,19 @@
+# Concluído
+The first loop (starting around line 460) writes merged cells for headers, then the second loop tries to overwrite them. I need to remove the first loop entirely.
+
+
+Executou 4 comandos, editou 2 arquivos, visualizou um arquivo
+Executou 4 comandos, editou 2 arquivos, visualizou um arquivo
+
+Remove the first (broken) pass that conflicts with the second pass
+
+build_dieta.py
+
+Find exact lines
+
+Script
+
+View the problematic section
+
+Remove the first broken loop
+
