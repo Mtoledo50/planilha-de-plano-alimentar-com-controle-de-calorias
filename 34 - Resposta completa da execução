@@ -1,0 +1,30 @@
+Vou construir a planilha completa do zero. É um projeto grande — vou executar em partes para garantir qualidade.
+
+Executou um comando, 
+criou um arquivo
+Executou um comando, 
+criou um arquivo
+
+
+Check for syntax issues in nutrient dict
+Script
+  
+Full weekly meal plan spreadsheet builder
+build_semanal.py
+
+Concluído
+
+Vou construir a planilha completa do zero com toda a estrutura semanal, dropdowns e tabela de substituição.Executou 4 comandos, leu um arquivoExecutou 4 comandos, leu um arquivoWrite the full weekly meal plan scriptScriptBuild the spreadsheetScriptRecalculate and verify zero errorsScriptCopy to outputsScriptPresented fileConcluídoPlanilha completa! 1.226 fórmulas, zero erros. Aqui está o que foi construído:
+
+9 abas no total:
+SEG · TER · QUA · QUI · SEX · SAB · DOM — Uma aba para cada dia da semana com:
+
+Cardápios completos divididos em 5 refeições com horários: ☕ Café da Manhã (08:00) · 🍌 Lanche (10:00) · 🥗 Almoço (13:00) · ☕ Café da Tarde (18:00) · 🌙 Jantar (20:30)
+SEG = QUA = SEX (cardápio azul) · TER = QUI = SAB (cardápio verde) · DOM tem cardápio exclusivo
+Seções de opção/substituição para almoço e jantar onde indicado
+Dropdown ▼ em cada célula de alimento — clique a seta e escolha qualquer um dos 80 alimentos da lista
+Porção (g) editável — calorias e macros recalculam automaticamente via fórmula VLOOKUP
+Subtotal por refeição + 📊 TOTAL DO DIA + status calórico automático (✅ Na meta / ⚠️ Abaixo / 🔴 Acima)
+Tabela resumo por refeição com % das calorias diárias
+
+🔄 Substituição — Calculadora interativa para comparar dois alimentos e ver a diferença calórica, seguida de 4 tabelas completas por categoria (Carboidratos, Frutas, Pães, Proteínas) com valores por 100g e campo de porção editável que recalcula as calorias de cada alimento em tempo real.
