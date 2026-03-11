@@ -1,0 +1,10 @@
+bash
+
+grep -n "prev_meal = None\|Reset and build\|MEAL_END\|row2 = row" /home/claude/build_dieta.py | head -20
+Saída
+
+452:MEAL_END   = MEAL_START + len(REFEICOES) - 1
+464:prev_meal = None
+480:        MEAL_END += 1
+484:        row2 = row + 1
+488:# Reset and build properly with section headers counted
