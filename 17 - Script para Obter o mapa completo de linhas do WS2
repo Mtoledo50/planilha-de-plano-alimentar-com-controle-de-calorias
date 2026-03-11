@@ -1,0 +1,65 @@
+bash
+
+cd /home/claude && python3 -c "
+from openpyxl import load_workbook
+wb = load_workbook('plano_alimentar.xlsx')
+ws2 = wb['🍽️ Plano do Dia']
+
+# Get full structure - all rows
+print('=== Full WS2 ===')
+for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, min_col=2, max_col=3):
+    b = row[0]
+    if b.value:
+        print(f'  R{b.row}: {repr(str(b.value)[:50])}')
+" 2>&1
+Saída
+
+=== Full WS2 ===
+  R2: '🍽️  PLANO ALIMENTAR DIÁRIO — CONTROLE DE CALORIAS '
+  R3: 'Digite o nome do alimento na coluna C e a porção ('
+  R4: '⚙️ CONFIGURAÇÕES DO DIA'
+  R5: '💊 Necessidade Proteica (g/kg × peso):'
+  R7: '#'
+  R8: '  ☀️ Café da Manhã'
+  R9: '1'
+  R10: '2'
+  R11: '3'
+  R12: '4'
+  R13: '5'
+  R14: '  🍌 Lanche da Manhã'
+  R15: '6'
+  R16: '7'
+  R17: '  🥃 Almoço'
+  R18: '8'
+  R19: '9'
+  R20: '10'
+  R21: '11'
+  R22: '12'
+  R23: '13'
+  R24: '14'
+  R25: '  🍵 Lanche da Tarde'
+  R26: '15'
+  R27: '16'
+  R28: '17'
+  R29: '18'
+  R30: '  🌙 Jantar'
+  R31: '19'
+  R32: '20'
+  R33: '21'
+  R34: '22'
+  R35: '23'
+  R36: '24'
+  R37: '  🌛 Ceia'
+  R38: '25'
+  R39: '26'
+  R40: '27'
+  R42: '📊 TOTAL DO DIA'
+  R43: '🎯 STATUS vs. META'
+  R45: '  📊 CALORIAS POR REFEIÇÃO'
+  R46: 'Refeição'
+  R47: '☀️ Café da Manhã'
+  R48: '🍌 Lanche da Manhã'
+  R49: '🥃 Almoço'
+  R50: '🍵 Lanche da Tarde'
+  R51: '🌙 Jantar'
+  R52: '🌛 Ceia'
