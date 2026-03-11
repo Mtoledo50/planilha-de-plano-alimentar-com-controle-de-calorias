@@ -1,0 +1,784 @@
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+
+wb = Workbook()
+
+# ── PALETTE ──────────────────────────────────────────────────────────
+C = {
+    "verde_esc":  "1B5E20", "verde_med":  "2E7D32", "verde_cla":  "A5D6A7", "verde_bg":  "E8F5E9",
+    "laranja":    "E65100", "laranja_cla":"FFE0B2", "laranja_bg": "FFF3E0",
+    "azul_esc":   "0D47A1", "azul_med":   "1565C0", "azul_cla":   "BBDEFB", "azul_bg":   "E3F2FD",
+    "roxo":       "4A148C", "roxo_cla":   "E1BEE7", "roxo_bg":    "F3E5F5",
+    "verm":       "B71C1C", "verm_cla":   "FFCDD2", "verm_bg":    "FFEBEE",
+    "amarelo":    "F57F17", "amarelo_cla":"FFF9C4", "amarelo_bg": "FFFDE7",
+    "teal":       "004D40", "teal_cla":   "B2DFDB", "teal_bg":    "E0F2F1",
+    "marrom":     "4E342E", "marrom_cla": "D7CCC8", "marrom_bg":  "EFEBE9",
+    "rosa":       "880E4F", "rosa_cla":   "F8BBD0", "rosa_bg":    "FCE4EC",
+    "cinza_esc":  "212121", "cinza_med":  "424242", "cinza":      "757575",
+    "cinza_cla":  "EEEEEE", "cinza_bg":   "FAFAFA",
+    "branco":     "FFFFFF", "input_am":   "FFFDE7", "input_bor":  "F9A825",
+    "input_azul": "1A237E",
+}
+
+def F(h): return PatternFill("solid", start_color=h, fgColor=h)
+def ft(sz=10, bold=False, color="212121", italic=False):
+    return Font(name="Calibri", size=sz, bold=bold, color=color, italic=italic)
+def al(h="center", v="center", wrap=False):
+    return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+def s(style="thin", c="BDBDBD"): return Side(style=style, color=c)
+def bdr(t="thin", c="BDBDBD"):
+    sd = s(t, c); return Border(left=sd, right=sd, top=sd, bottom=sd)
+
+BDR = bdr()
+NUM  = '0.0'
+KCAL = '0.0 "kcal"'
+GR   = '0.0 "g"'
+KCAL100 = '0.00 "kcal/g"'
+
+def title(ws, row, text, bg, ncols, sc=2, sz=14):
+    ec = get_column_letter(sc + ncols - 1)
+    ws.merge_cells(f"{get_column_letter(sc)}{row}:{ec}{row}")
+    c = ws.cell(row=row, column=sc, value=text)
+    c.font = ft(sz, True, C["branco"]); c.fill = F(bg)
+    c.alignment = al(); c.border = BDR
+    ws.row_dimensions[row].height = 32
+
+def sec(ws, row, text, bg, ncols, sc=2):
+    ec = get_column_letter(sc + ncols - 1)
+    ws.merge_cells(f"{get_column_letter(sc)}{row}:{ec}{row}")
+    c = ws.cell(row=row, column=sc, value=text)
+    c.font = ft(10, True, C["branco"]); c.fill = F(bg)
+    c.alignment = al("left"); c.border = BDR
+    ws.row_dimensions[row].height = 24
+
+def hdr(ws, row, col, text, bg, wrap=True):
+    c = ws.cell(row=row, column=col, value=text)
+    c.font = ft(9, True, C["branco"]); c.fill = F(bg)
+    c.alignment = al("center", "center", wrap=wrap)
+    c.border = BDR; ws.row_dimensions[row].height = 36
+
+def inp(ws, row, col, val="", num=None):
+    c = ws.cell(row=row, column=col, value=val)
+    c.font = ft(10, color=C["input_azul"]); c.fill = F(C["input_am"])
+    c.alignment = al("left" if isinstance(val, str) else "right")
+    c.border = bdr("thin", C["input_bor"])
+    if num: c.number_format = num
+    return c
+
+def dat(ws, row, col, val, bg=None, bold=False, color="212121", num=None, aln="right"):
+    c = ws.cell(row=row, column=col, value=val)
+    c.font = ft(10, bold, color); c.fill = F(bg or C["branco"])
+    c.alignment = al(aln, "center"); c.border = BDR
+    if num: c.number_format = num
+    return c
+
+def frm(ws, row, col, formula, bg=None, bold=False, color="212121", num=None):
+    c = ws.cell(row=row, column=col, value=formula)
+    c.font = ft(10, bold, color); c.fill = F(bg or C["branco"])
+    c.alignment = al("right", "center"); c.border = BDR
+    if num: c.number_format = num
+    return c
+
+# ══════════════════════════════════════════════════════════════════════════
+# DADOS NUTRICIONAIS — Tabela TACO/UNICAMP + TBCA/USP (valores por 100g)
+# Formato: (nome, kcal/100g, prot_g, carb_g, gord_g, fibra_g, obs)
+# ══════════════════════════════════════════════════════════════════════════
+ALIMENTOS = {
+    "🌾 Carboidratos / Cereais e Derivados": [
+        ("Arroz branco cozido",       128, 2.5,  28.1, 0.2, 1.6,  "TACO - porção 100g cozido"),
+        ("Arroz integral cozido",     124, 2.6,  25.8, 1.0, 2.7,  "TACO - mais fibras que o branco"),
+        ("Macarrão cozido",           158, 4.8,  31.7, 0.8, 1.5,  "TACO - sem molho"),
+        ("Macarrão integral cozido",  141, 5.2,  28.6, 1.1, 3.2,  "TACO - mais fibras"),
+        ("Pão francês",               300, 8.0,  58.6, 3.1, 2.3,  "TACO - 50g = 1 unidade"),
+        ("Pão integral",              253, 8.8,  46.7, 3.5, 5.7,  "TACO - fonte de fibras"),
+        ("Aveia em flocos",           394, 13.9, 66.6, 8.5, 9.1,  "TACO - excelente fibra solúvel"),
+        ("Batata inglesa cozida",      87, 1.9,  19.7, 0.1, 1.8,  "TACO - sem pele"),
+        ("Batata doce cozida",        110, 1.4,  26.0, 0.1, 2.7,  "TACO - índice glicêmico médio"),
+        ("Mandioca cozida",           149, 0.9,  35.3, 0.3, 1.9,  "TACO - aipim/macaxeira"),
+        ("Tapioca (goma)",            354, 0.1,  87.8, 0.3, 0.2,  "TACO - alta em carboidrato"),
+        ("Cuscuz de milho",           337, 8.1,  71.4, 1.2, 2.8,  "TACO - seco"),
+        ("Quinoa cozida",             120, 4.4,  21.3, 1.9, 2.8,  "TBCA/USP - grão completo"),
+        ("Granola",                   398, 8.8,  66.4, 9.7, 5.0,  "TACO - verificar açúcar"),
+    ],
+    "🥩 Proteínas Animais — Carnes e Peixes": [
+        ("Frango filé grelhado",       163, 31.5,  0.0, 3.7, 0.0,  "TACO - peito sem pele"),
+        ("Frango coxa s/ pele grelhada",215, 26.8,  0.0, 12.0,0.0, "TACO - coxa sem pele"),
+        ("Carne bovina patinho grelhado",219, 35.0, 0.0, 8.5, 0.0, "TACO - corte magro"),
+        ("Carne bovina alcatra grelhada",237,32.8,  0.0,11.4, 0.0, "TACO"),
+        ("Tilápia grelhada",           128, 26.2,  0.0, 2.6, 0.0,  "TACO - peixe magro"),
+        ("Salmão assado",              246, 27.3,  0.0,15.0, 0.0,  "TACO - rico em ômega-3"),
+        ("Atum em água (lata)",        119, 26.3,  0.0, 1.3, 0.0,  "TACO - sem óleo"),
+        ("Sardinha assada",            270, 30.3,  0.0,16.0, 0.0,  "TACO - com osso"),
+        ("Camarão cozido",             115, 24.4,  0.0, 1.5, 0.0,  "TACO"),
+        ("Ovo inteiro cozido",         146, 13.3,  0.6,10.0, 0.0,  "TACO - 1 ovo ≈ 50g"),
+        ("Clara de ovo cozida",         52, 11.1,  0.8, 0.2, 0.0,  "TACO - baixa caloria"),
+        ("Bisteca suína grelhada",     280, 28.9,  0.0,17.4, 0.0,  "TACO"),
+    ],
+    "🫘 Proteínas Vegetais — Leguminosas": [
+        ("Feijão preto cozido",        77,  4.5,  13.6, 0.5, 8.4,  "TACO - rico em ferro"),
+        ("Feijão carioca cozido",      76,  4.8,  13.0, 0.5, 8.5,  "TACO - mais consumido no BR"),
+        ("Lentilha cozida",            93,  6.3,  15.7, 0.5, 3.7,  "TACO"),
+        ("Grão-de-bico cozido",       164,  9.0,  27.4, 2.6, 6.0,  "TACO - proteína completa"),
+        ("Ervilha cozida",             95,  6.5,  16.8, 0.2, 6.0,  "TACO"),
+        ("Soja cozida",               141, 13.6,  12.1, 5.7, 9.0,  "TACO - proteína vegetal completa"),
+        ("Tofu",                       68,  6.6,   1.2, 4.2, 0.3,  "TBCA/USP - proteína vegetal"),
+        ("Edamame cozido",            122, 11.9,   8.9, 5.2, 5.2,  "TBCA/USP - soja verde"),
+    ],
+    "🥛 Laticínios e Ovos": [
+        ("Leite integral",             61,  3.2,   4.7, 3.2, 0.0,  "TACO"),
+        ("Leite desnatado",            35,  3.5,   5.1, 0.2, 0.0,  "TACO - menos gordura"),
+        ("Iogurte natural integral",   74,  4.3,   4.8, 4.0, 0.0,  "TACO"),
+        ("Iogurte grego natural",      97,  9.0,   3.6, 5.0, 0.0,  "TBCA - proteína alta"),
+        ("Queijo cottage",             97,  11.1,  2.7, 4.3, 0.0,  "TACO"),
+        ("Queijo mussarela",          289, 18.0,   2.6,22.9, 0.0,  "TACO"),
+        ("Queijo parmesão",           452, 35.8,   4.0,32.7, 0.0,  "TACO - alto cálcio"),
+        ("Cream cheese",              350,  5.8,   4.1,34.9, 0.0,  "TACO"),
+    ],
+    "🥗 Saladas e Folhosos": [
+        ("Alface crespa crua",         11,  1.3,   1.7, 0.2, 1.8,  "TACO - base de saladas"),
+        ("Alface americana crua",       12,  1.1,   2.1, 0.2, 1.5,  "TACO"),
+        ("Rúcula crua",                25,  2.6,   3.7, 0.4, 1.6,  "TACO - rica em cálcio"),
+        ("Espinafre cru",              24,  2.2,   3.6, 0.3, 2.5,  "TACO - rico em ferro"),
+        ("Repolho cru",                22,  1.3,   4.1, 0.1, 1.9,  "TACO"),
+        ("Acelga crua",                16,  1.5,   2.6, 0.1, 1.6,  "TACO"),
+        ("Agrião cru",                 22,  2.3,   3.3, 0.2, 1.0,  "TACO"),
+        ("Couve crua",                 45,  3.8,   7.7, 0.5, 3.2,  "TACO - rica em ferro e cálcio"),
+        ("Tomate cru",                 18,  0.9,   3.5, 0.2, 1.2,  "TACO - licopeno"),
+        ("Pepino cru",                 13,  0.7,   2.7, 0.1, 0.5,  "TACO - hidratante"),
+        ("Cenoura crua",               34,  0.9,   7.7, 0.2, 3.2,  "TACO - betacaroteno"),
+        ("Beterraba crua",             43,  1.6,   9.3, 0.1, 2.8,  "TACO"),
+        ("Rabanete cru",               20,  0.8,   4.1, 0.1, 1.9,  "TACO"),
+        ("Cebola crua",                40,  1.2,   9.0, 0.1, 1.7,  "TACO"),
+        ("Alho cru",                  131,  6.4,  26.4, 0.5, 4.1,  "TACO - antioxidante"),
+    ],
+    "🥦 Legumes e Verduras Cozidas": [
+        ("Brócolis cozido",            22,  2.6,   3.5, 0.3, 3.0,  "TACO - vitamina C e K"),
+        ("Couve-flor cozida",          23,  2.2,   3.9, 0.2, 2.2,  "TACO"),
+        ("Abobrinha cozida",           12,  0.8,   2.3, 0.1, 1.1,  "TACO - baixa caloria"),
+        ("Berinjela cozida",           17,  0.8,   3.7, 0.1, 2.7,  "TACO"),
+        ("Chuchu cozido",              17,  0.7,   3.8, 0.1, 1.4,  "TACO"),
+        ("Vagem cozida",               31,  2.0,   5.9, 0.2, 3.1,  "TACO"),
+        ("Pimentão vermelho cru",       28,  1.0,   6.1, 0.3, 2.1,  "TACO - rico em vit C"),
+        ("Pimentão verde cru",         21,  0.9,   4.4, 0.2, 1.9,  "TACO"),
+        ("Milho cozido",               86,  2.7,  19.2, 1.0, 2.4,  "TACO"),
+        ("Mandioquinha cozida",        92,  1.1,  21.7, 0.4, 1.8,  "TACO - batata baroa"),
+        ("Abóbora cozida",             26,  0.7,   6.0, 0.1, 2.0,  "TACO"),
+        ("Palmito cozido",             28,  2.3,   5.2, 0.3, 2.7,  "TACO"),
+    ],
+    "🍎 Frutas": [
+        ("Banana nanica",              92,  1.3,  23.8, 0.1, 1.9,  "TACO - energia rápida"),
+        ("Banana prata",               99,  1.4,  25.6, 0.1, 2.0,  "TACO"),
+        ("Maçã com casca",             56,  0.3,  14.9, 0.1, 1.8,  "TACO - fibras na casca"),
+        ("Laranja pera",               46,  0.9,  11.5, 0.1, 2.2,  "TACO - vitamina C"),
+        ("Melão",                      29,  0.7,   7.4, 0.1, 0.3,  "TACO - baixa caloria"),
+        ("Melancia",                   33,  0.7,   8.0, 0.2, 0.3,  "TACO - hidratante"),
+        ("Mamão papaya",               45,  0.5,  11.9, 0.1, 1.8,  "TACO - digestivo"),
+        ("Manga espada",               64,  0.6,  16.9, 0.3, 1.4,  "TACO - betacaroteno"),
+        ("Abacaxi",                    48,  0.9,  12.3, 0.1, 1.0,  "TACO - bromelina"),
+        ("Morango",                    30,  0.8,   7.1, 0.3, 2.1,  "TACO - antioxidante"),
+        ("Uva niagara",                70,  0.9,  17.5, 0.4, 0.9,  "TACO"),
+        ("Kiwi",                       61,  1.1,  14.7, 0.6, 3.0,  "TBCA - vitamina C"),
+        ("Abacate",                   160,  1.2,   6.0,14.7, 6.2,  "TACO - gordura saudável"),
+        ("Coco fresco (polpa)",        354, 3.4,   6.2,33.5, 9.0,  "TACO - alto teor calórico"),
+        ("Açaí (polpa)",              247,  1.5,   7.3,23.3, 6.2,  "TACO - antioxidante"),
+    ],
+    "💧 Bebidas": [
+        ("Água",                         0,  0.0,   0.0, 0.0, 0.0,  "Fundamental - beba 2L/dia"),
+        ("Água de coco natural",         22,  0.7,   5.3, 0.2, 0.0,  "TACO - eletrólitos"),
+        ("Suco de laranja natural",      45,  0.7,  10.7, 0.2, 0.4,  "TACO - sem açúcar"),
+        ("Suco de limão natural",        29,  0.9,   7.0, 0.4, 0.3,  "TACO - vitamina C"),
+        ("Leite de amêndoas",            24,  0.6,   3.1, 1.0, 0.5,  "TBCA - alternativa vegetal"),
+        ("Leite de aveia",               48,  1.3,   9.0, 0.8, 1.0,  "TBCA"),
+        ("Chá verde (infusão)",           1,  0.2,   0.2, 0.0, 0.0,  "TACO - antioxidante"),
+        ("Chá de camomila (infusão)",     1,  0.0,   0.1, 0.0, 0.0,  "TACO - calmante"),
+        ("Café sem açúcar",               2,  0.3,   0.0, 0.0, 0.0,  "TACO"),
+        ("Kombucha",                     15,  0.0,   3.5, 0.0, 0.0,  "TBCA - probiótico"),
+        ("Vitamina de banana com leite", 90,  3.0,  18.0, 1.5, 1.0,  "Cálculo estimado"),
+        ("Smoothie verde (couve+limão)",  22,  1.5,   4.2, 0.3, 2.0,  "Cálculo estimado"),
+    ],
+    "🥜 Oleaginosas, Sementes e Gorduras Boas": [
+        ("Amendoim torrado",            581, 26.2,  20.1,47.4, 8.0,  "TACO - comer com moderação"),
+        ("Castanha-do-Pará",            656, 14.3,  15.1,63.5, 7.9,  "TACO - selênio - 1-2/dia"),
+        ("Castanha de caju torrada",    557, 14.5,  30.5,42.7, 3.0,  "TACO"),
+        ("Nozes",                       620, 14.4,  18.3,59.4, 6.7,  "TACO - ômega-3"),
+        ("Amêndoa torrada",             600, 18.7,  19.7,52.5,11.2,  "TBCA - vitamina E"),
+        ("Semente de chia",             490, 15.6,  42.1,30.7,34.4,  "TBCA - fibras e ômega-3"),
+        ("Semente de linhaça",          495, 18.3,  28.9,35.1,27.3,  "TBCA"),
+        ("Semente de girassol",         582, 20.8,  20.0,51.5, 8.6,  "TBCA"),
+        ("Azeite de oliva extra virgem",884,  0.0,   0.0,100.0,0.0,  "TACO - gordura monoinsaturada"),
+        ("Óleo de coco virgem",         862,  0.0,   0.0,100.0,0.0,  "TACO - triglicerídeos médios"),
+        ("Pasta de amendoim integral",  593, 28.3,  19.9,49.2, 7.5,  "TACO - sem açúcar adicionado"),
+        ("Tahine (pasta de gergelim)",  582, 17.0,  26.2,50.9, 9.3,  "TBCA"),
+    ],
+    "🍫 Suplementos e Funcionais": [
+        ("Whey protein (pó)",           374, 80.0,   8.0, 4.0, 0.0,  "Ref. média mercado - 1 scoop≈30g"),
+        ("Proteína vegetal (ervilha)",  350, 75.0,  12.0, 6.0, 5.0,  "Ref. média mercado"),
+        ("Proteína de soja isolada",    354, 90.0,   2.0, 1.0, 2.0,  "Ref. média mercado"),
+        ("Creatina monohidratada",        0,  0.0,   0.0, 0.0, 0.0,  "Sem calorias - 3-5g/dia"),
+        ("Colágeno hidrolisado (pó)",    380, 90.0,  1.5, 0.5, 0.0,  "Ref. média mercado"),
+        ("Mel",                          304, 0.3,  82.4, 0.0, 0.2,  "TACO - adoçante natural"),
+        ("Cacau em pó sem açúcar",       350, 19.6,  57.9,10.7,33.2, "TACO - antioxidante"),
+        ("Proteína de amendoim (pó)",    360, 45.0,  30.0, 8.0, 8.0,  "Ref. média mercado"),
+    ],
+    "🍽️ Temperos e Condimentos": [
+        ("Sal (cloreto de sódio)",        0,  0.0,   0.0, 0.0, 0.0,  "Limite: 5g/dia OMS"),
+        ("Azeite de oliva (tempero)",   884,  0.0,   0.0,100.0,0.0,  "1 colher sopa = 10g"),
+        ("Vinagre de maçã",               4,  0.0,   0.9, 0.0, 0.0,  "TACO"),
+        ("Limão (suco)",                 29,  0.9,   7.0, 0.4, 0.3,  "TACO - vitamina C"),
+        ("Mostarda",                     60,  4.0,   5.8, 3.0, 3.8,  "TACO"),
+        ("Molho shoyu (soja)",           64,  5.7,   9.1, 0.0, 0.6,  "TACO - alto sódio"),
+        ("Tahine",                      582, 17.0,  26.2,50.9, 9.3,  "TBCA"),
+        ("Gengibre fresco",              63,  1.6,  12.5, 0.6, 2.0,  "TACO - anti-inflamatório"),
+        ("Cúrcuma (açafrão-da-terra)",  312,  9.7,  67.8, 3.3,21.1,  "TACO - curcumina"),
+        ("Canela em pó",                261,  3.9,  79.8, 1.2,53.1,  "TACO - controle glicêmico"),
+    ],
+}
+
+# Leaf row data: (categoria, nome, kcal, prot, carb, gord, fibra, obs)
+ALL_FOODS = []
+for cat, foods in ALIMENTOS.items():
+    for food in foods:
+        ALL_FOODS.append((cat,) + food)
+
+# ══════════════════════════════════════════════════════════════════════════
+# ABA 1 — TABELA DE ALIMENTOS (referência TACO/TBCA)
+# ══════════════════════════════════════════════════════════════════════════
+ws1 = wb.active
+ws1.title = "📋 Tabela de Alimentos"
+ws1.sheet_view.showGridLines = False
+ws1.freeze_panes = "B7"
+
+col_widths = {"A":2,"B":30,"C":22,"D":10,"E":10,"F":10,"G":10,"H":10,"I":10,"J":26,"K":2}
+for col, w in col_widths.items():
+    ws1.column_dimensions[col].width = w
+
+ws1.row_dimensions[1].height = 6
+title(ws1, 2, "📋  TABELA NUTRICIONAL DE ALIMENTOS — Fonte: TACO/UNICAMP · TBCA/USP", C["verde_esc"], 9, sz=13)
+
+ws1.row_dimensions[3].height = 18
+ws1.merge_cells("B3:J3")
+c = ws1["B3"]
+c.value = "Valores por 100g de alimento. Fonte: Tabela TACO 4ª Ed. (NEPA/UNICAMP) e TBCA/USP. Consulte sempre um nutricionista para orientação personalizada."
+c.font = ft(9, italic=True, color=C["cinza"]); c.fill = F(C["verde_bg"])
+c.alignment = al("left", "center"); c.border = BDR
+
+ws1.row_dimensions[4].height = 8
+
+# Legend row
+ws1.row_dimensions[5].height = 20
+ws1.merge_cells("B5:C5")
+ws1["B5"].value = "Legenda de categorias:"; ws1["B5"].font = ft(9, True); ws1["B5"].fill = F(C["cinza_cla"]); ws1["B5"].border = BDR; ws1["B5"].alignment = al("left")
+
+cat_colors = {
+    "🌾 Carboidratos / Cereais e Derivados": C["amarelo"],
+    "🥩 Proteínas Animais — Carnes e Peixes": C["verm"],
+    "🫘 Proteínas Vegetais — Leguminosas":    C["marrom"],
+    "🥛 Laticínios e Ovos":                  C["azul_med"],
+    "🥗 Saladas e Folhosos":                  C["verde_med"],
+    "🥦 Legumes e Verduras Cozidas":          C["teal"],
+    "🍎 Frutas":                              C["rosa"],
+    "💧 Bebidas":                             C["azul_esc"],
+    "🥜 Oleaginosas, Sementes e Gorduras Boas": C["laranja"],
+    "🍫 Suplementos e Funcionais":            C["roxo"],
+    "🍽️ Temperos e Condimentos":              C["cinza_med"],
+}
+
+# Headers row 6
+ws1.row_dimensions[6].height = 38
+for col, h, bg in [
+    (2, "Alimento",              C["verde_esc"]),
+    (3, "Categoria",             C["verde_esc"]),
+    (4, "Kcal\n/100g",           C["verm"]),
+    (5, "Proteínas\n(g/100g)",   C["azul_med"]),
+    (6, "Carboidratos\n(g/100g)",C["amarelo"]),
+    (7, "Gorduras\n(g/100g)",    C["laranja"]),
+    (8, "Fibras\n(g/100g)",      C["verde_med"]),
+    (9, "Kcal\npor grama",       C["roxo"]),
+    (10,"Observação / Fonte",    C["cinza_med"]),
+]:
+    hdr(ws1, 6, col, h, bg)
+
+# Fill food data
+FOOD_ROW_MAP = {}  # food_name -> row (for VLOOKUP reference)
+row = 7
+prev_cat = None
+
+for cat, nome, kcal, prot, carb, gord, fibra, obs in ALL_FOODS:
+    bg_cat = cat_colors.get(cat, C["cinza"])
+
+    # Category header when changes
+    if cat != prev_cat:
+        if row > 7:
+            ws1.row_dimensions[row].height = 6; row += 1
+        sec(ws1, row, f"  {cat}", bg_cat, 9)
+        row += 1
+        prev_cat = cat
+
+    ws1.row_dimensions[row].height = 18
+    alt_bg = C["cinza_bg"] if row % 2 == 0 else C["branco"]
+
+    # nome
+    c = ws1.cell(row=row, column=2, value=nome)
+    c.font = ft(10, color=C["cinza_esc"]); c.fill = F(alt_bg); c.border = BDR; c.alignment = al("left", "center")
+
+    # categoria
+    c = ws1.cell(row=row, column=3, value=cat)
+    c.font = ft(8, color=C["branco"]); c.fill = F(bg_cat); c.border = BDR; c.alignment = al("center", "center", wrap=True)
+
+    # nutritional values (hardcoded data from TACO)
+    for col_i, val, num in [(4, kcal, NUM), (5, prot, NUM), (6, carb, NUM), (7, gord, NUM), (8, fibra, NUM)]:
+        c = ws1.cell(row=row, column=col_i, value=val)
+        c.font = ft(10); c.fill = F(alt_bg); c.border = BDR
+        c.alignment = al("right", "center"); c.number_format = num
+
+    # kcal por grama (formula)
+    frm(ws1, row, 9, f"=D{row}/100", alt_bg, num="0.000")
+
+    # obs
+    c = ws1.cell(row=row, column=10, value=obs)
+    c.font = ft(8, italic=True, color=C["cinza"]); c.fill = F(alt_bg); c.border = BDR; c.alignment = al("left", "center")
+
+    FOOD_ROW_MAP[nome] = row
+    row += 1
+
+LAST_FOOD_ROW = row - 1
+
+# ══════════════════════════════════════════════════════════════════════════
+# ABA 2 — PLANO ALIMENTAR DIÁRIO
+# ══════════════════════════════════════════════════════════════════════════
+ws2 = wb.create_sheet("🍽️ Plano do Dia")
+ws2.sheet_view.showGridLines = False
+ws2.freeze_panes = "B8"
+
+col_w2 = {"A":2,"B":5,"C":32,"D":18,"E":12,"F":12,"G":12,"H":12,"I":12,"J":16,"K":20,"L":3}
+for col, w in col_w2.items():
+    ws2.column_dimensions[col].width = w
+
+ws2.row_dimensions[1].height = 6
+title(ws2, 2, "🍽️  PLANO ALIMENTAR DIÁRIO — CONTROLE DE CALORIAS E MACROS", C["teal"], 10, sz=13)
+
+ws2.row_dimensions[3].height = 18
+ws2.merge_cells("B3:K3")
+c = ws2["B3"]
+c.value = "Digite o nome do alimento na coluna C e a porção (g) na coluna E. Os valores nutricionais são calculados automaticamente via VLOOKUP na tabela de referência."
+c.font = ft(9, italic=True, color=C["cinza"]); c.fill = F(C["teal_bg"])
+c.alignment = al("left", "center"); c.border = BDR
+
+# Meta calórica
+ws2.row_dimensions[4].height = 24
+ws2.row_dimensions[5].height = 24
+
+ws2.merge_cells("B4:D4"); c = ws2["B4"]; c.value = "⚙️ CONFIGURAÇÕES DO DIA"
+c.font = ft(10, True, C["branco"]); c.fill = F(C["teal"]); c.border = BDR; c.alignment = al("left")
+
+configs = [
+    ("E4", "Meta Calórica (kcal):", "F4", 2000, "0"),
+    ("G4", "Peso Corporal (kg):",   "H4", 70,   "0.0"),
+    ("I4", "Objetivo:",             "J4", "Emagrecimento", None),
+]
+for lc, lv, ic, iv, num in configs:
+    c = ws2[lc]; c.value = lv; c.font = ft(9, True); c.fill = F(C["cinza_cla"]); c.border = BDR; c.alignment = al("right")
+    c2 = ws2[ic]; c2.value = iv; c2.font = ft(10, True, C["input_azul"])
+    c2.fill = F(C["input_am"]); c2.border = bdr("thin", C["input_bor"]); c2.alignment = al("center")
+    if num: c2.number_format = num
+
+ws2.merge_cells("B5:D5"); c = ws2["B5"]; c.value = "💊 Necessidade Proteica (g/kg × peso):"
+c.font = ft(9, True); c.fill = F(C["cinza_cla"]); c.border = BDR; c.alignment = al("right")
+ws2["E5"].value = "Fator prot (g/kg):"; ws2["E5"].font = ft(9); ws2["E5"].fill = F(C["cinza_cla"]); ws2["E5"].border = BDR
+ws2["F5"].value = 1.8; ws2["F5"].font = ft(10, True, C["input_azul"]); ws2["F5"].fill = F(C["input_am"]); ws2["F5"].border = bdr("thin", C["input_bor"]); ws2["F5"].number_format = "0.0"
+ws2["G5"].value = "Meta prot (g):"; ws2["G5"].font = ft(9, True); ws2["G5"].fill = F(C["cinza_cla"]); ws2["G5"].border = BDR
+ws2["H5"].value = "=H4*F5"; ws2["H5"].font = ft(10, True); ws2["H5"].fill = F(C["azul_cla"]); ws2["H5"].border = BDR; ws2["H5"].number_format = "0.0 \"g\""
+ws2["I5"].value = "Meta carbs (g):"; ws2["I5"].font = ft(9, True); ws2["I5"].fill = F(C["cinza_cla"]); ws2["I5"].border = BDR
+ws2["J5"].value = "=F4*0.50/4"; ws2["J5"].font = ft(10, True); ws2["J5"].fill = F(C["amarelo_cla"]); ws2["J5"].border = BDR; ws2["J5"].number_format = "0.0 \"g\""
+
+ws2.row_dimensions[6].height = 8
+
+# Column headers
+ws2.row_dimensions[7].height = 38
+for col, h, bg in [
+    (2,  "#",                  C["teal"]),
+    (3,  "Alimento",           C["teal"]),
+    (4,  "Refeição",           C["teal"]),
+    (5,  "Porção\n(g)",        C["azul_med"]),
+    (6,  "Calorias\n(kcal)",   C["verm"]),
+    (7,  "Proteínas\n(g)",     C["azul_med"]),
+    (8,  "Carboidratos\n(g)",  C["amarelo"]),
+    (9,  "Gorduras\n(g)",      C["laranja"]),
+    (10, "Fibras\n(g)",        C["verde_med"]),
+    (11, "% Meta\nCalórica",   C["roxo"]),
+]:
+    hdr(ws2, 7, col, h, bg)
+
+# Refeições modelo com alimentos pré-preenchidos
+REFEICOES = [
+    # (refeicao, alimento, porcao_g)
+    # ☀️ Café da Manhã
+    ("☀️ Café da Manhã",   "Aveia em flocos",         40),
+    ("☀️ Café da Manhã",   "Banana nanica",            80),
+    ("☀️ Café da Manhã",   "Iogurte grego natural",   100),
+    ("☀️ Café da Manhã",   "Mel",                      10),
+    ("☀️ Café da Manhã",   "Café sem açúcar",         150),
+    # 🍌 Lanche da Manhã
+    ("🍌 Lanche da Manhã", "Maçã com casca",          130),
+    ("🍌 Lanche da Manhã", "Pasta de amendoim integral", 20),
+    # 🥗 Almoço
+    ("🥃 Almoço",          "Arroz integral cozido",   120),
+    ("🥃 Almoço",          "Feijão carioca cozido",    80),
+    ("🥃 Almoço",          "Frango filé grelhado",    120),
+    ("🥃 Almoço",          "Brócolis cozido",          80),
+    ("🥃 Almoço",          "Cenoura crua",             30),
+    ("🥃 Almoço",          "Azeite de oliva extra virgem", 8),
+    ("🥃 Almoço",          "Laranja pera",            130),
+    # 🍵 Lanche da Tarde
+    ("🍵 Lanche da Tarde", "Pão integral",             50),
+    ("🍵 Lanche da Tarde", "Queijo cottage",            50),
+    ("🍵 Lanche da Tarde", "Morango",                  80),
+    ("🍵 Lanche da Tarde", "Chá verde (infusão)",     200),
+    # 🌙 Jantar
+    ("🌙 Jantar",          "Tilápia grelhada",        130),
+    ("🌙 Jantar",          "Batata doce cozida",      100),
+    ("🌙 Jantar",          "Abobrinha cozida",         80),
+    ("🌙 Jantar",          "Espinafre cru",            40),
+    ("🌙 Jantar",          "Tomate cru",               60),
+    ("🌙 Jantar",          "Azeite de oliva extra virgem", 5),
+    # 🌛 Ceia
+    ("🌛 Ceia",            "Iogurte grego natural",   120),
+    ("🌛 Ceia",            "Semente de chia",          10),
+    ("🌛 Ceia",            "Castanha-do-Pará",          5),
+]
+
+MEAL_START = 8
+MEAL_END   = MEAL_START + len(REFEICOES) - 1
+
+# Track section colors per meal
+meal_colors = {
+    "☀️ Café da Manhã":   (C["amarelo"],    C["amarelo_bg"]),
+    "🍌 Lanche da Manhã": (C["laranja"],    C["laranja_bg"]),
+    "🥃 Almoço":          (C["verde_med"],  C["verde_bg"]),
+    "🍵 Lanche da Tarde": (C["azul_med"],   C["azul_bg"]),
+    "🌙 Jantar":          (C["teal"],       C["teal_bg"]),
+    "🌛 Ceia":            (C["roxo"],       C["roxo_bg"]),
+}
+
+# Build meal rows with section headers
+ws2_data = []  # list of (type, data)
+prev_meal2 = None
+for refeicao, alimento, porcao in REFEICOES:
+    if refeicao != prev_meal2:
+        ws2_data.append(("header", refeicao))
+        prev_meal2 = refeicao
+    ws2_data.append(("food", (refeicao, alimento, porcao)))
+
+# Unmerge any existing merges in meal area and rewrite
+MEAL_START = 8
+for i, item in enumerate(ws2_data):
+    row = MEAL_START + i
+    ws2.row_dimensions[row].height = 20 if item[0] == "food" else 24
+
+    if item[0] == "header":
+        refeicao = item[1]
+        dark, light = meal_colors.get(refeicao, (C["cinza_med"], C["cinza_bg"]))
+        ws2.merge_cells(f"B{row}:K{row}")
+        c = ws2.cell(row=row, column=2, value=f"  {refeicao}")
+        c.font = ft(11, True, C["branco"]); c.fill = F(dark); c.border = BDR; c.alignment = al("left")
+    else:
+        refeicao, alimento, porcao = item[1]
+        dark, light = meal_colors.get(refeicao, (C["cinza_med"], C["cinza_bg"]))
+        alt_bg = light if i % 2 == 0 else C["branco"]
+
+        seq = sum(1 for x in ws2_data[:i] if x[0] == "food") + 1
+        # seq #
+        c = ws2.cell(row=row, column=2, value=seq)
+        c.font = ft(9, color=C["cinza"]); c.fill = F(alt_bg); c.border = BDR; c.alignment = al("center")
+
+        # Alimento (input-style, pre-filled)
+        c = ws2.cell(row=row, column=3, value=alimento)
+        c.font = ft(10, color=C["input_azul"]); c.fill = F(C["input_am"])
+        c.border = bdr("thin", C["input_bor"]); c.alignment = al("left", "center")
+
+        # Refeição
+        c = ws2.cell(row=row, column=4, value=refeicao)
+        c.font = ft(9, color=C["branco"]); c.fill = F(dark); c.border = BDR; c.alignment = al("center", "center", wrap=True)
+
+        # Porção (input, pre-filled)
+        c = ws2.cell(row=row, column=5, value=porcao)
+        c.font = ft(10, True, C["input_azul"]); c.fill = F(C["input_am"])
+        c.border = bdr("thin", C["input_bor"]); c.alignment = al("right"); c.number_format = "0.0"
+
+        # VLOOKUP formulas — look up nutritional values from ws1
+        # VLOOKUP(alimento, tabela_col_B:col_J, col_offset, 0)
+        tbl = f"'📋 Tabela de Alimentos'!$B$7:$J${LAST_FOOD_ROW + 50}"
+        # kcal = col D (offset 3 from B), prot=E(4), carb=F(5), gord=G(6), fibra=H(7)
+        # kcal/g = col I (offset 8 from B)
+        for col_f, tbl_col in [(6,3),(7,4),(8,5),(9,6),(10,7)]:
+            formula = f"=IFERROR(VLOOKUP(C{row},{tbl},{tbl_col},0)*E{row}/100,0)"
+            frm(ws2, row, col_f, formula, alt_bg, num="0.0")
+
+        # % meta calórica
+        frm(ws2, row, 11, f"=IFERROR(F{row}/$F$4,0)", alt_bg, num="0.0%")
+
+MEAL_LAST_ROW = MEAL_START + len(ws2_data) - 1
+
+# ── Total row ──
+tot_row = MEAL_LAST_ROW + 2
+ws2.row_dimensions[MEAL_LAST_ROW + 1].height = 8
+ws2.row_dimensions[tot_row].height = 28
+ws2.merge_cells(f"B{tot_row}:E{tot_row}")
+c = ws2.cell(row=tot_row, column=2, value="📊 TOTAL DO DIA")
+c.font = ft(12, True, C["branco"]); c.fill = F(C["teal"]); c.border = BDR; c.alignment = al("center")
+
+for col_t, label, num, bg_t in [
+    (6,  f"=SUM(F{MEAL_START}:F{MEAL_LAST_ROW})", "0.0",  C["verm_cla"]),
+    (7,  f"=SUM(G{MEAL_START}:G{MEAL_LAST_ROW})", "0.0",  C["azul_cla"]),
+    (8,  f"=SUM(H{MEAL_START}:H{MEAL_LAST_ROW})", "0.0",  C["amarelo_cla"]),
+    (9,  f"=SUM(I{MEAL_START}:I{MEAL_LAST_ROW})", "0.0",  C["laranja_cla"]),
+    (10, f"=SUM(J{MEAL_START}:J{MEAL_LAST_ROW})", "0.0",  C["verde_cla"]),
+    (11, f"=IFERROR(F{tot_row}/F4,0)",             "0.0%", C["roxo_cla"]),
+]:
+    frm(ws2, tot_row, col_t, label, bg_t, bold=True, num=num)
+
+# ── Status row ──
+st_row = tot_row + 1
+ws2.row_dimensions[st_row].height = 24
+ws2.merge_cells(f"B{st_row}:E{st_row}")
+c = ws2.cell(row=st_row, column=2, value="🎯 STATUS vs. META")
+c.font = ft(10, True); c.fill = F(C["cinza_cla"]); c.border = BDR; c.alignment = al("center")
+
+# Calórico
+frm(ws2, st_row, 6,
+    f'=IF(F{tot_row}<F4*0.9,"⚠️ Abaixo",IF(F{tot_row}<=F4,"✅ Na meta",IF(F{tot_row}<=F4*1.1,"🟡 Acima 10%","🔴 Excedido")))',
+    C["verm_bg"], num="@")
+ws2.cell(row=st_row, column=6).alignment = al("center")
+ws2.cell(row=st_row, column=6).font = ft(9, True)
+
+# Proteína
+frm(ws2, st_row, 7,
+    f'=IF(G{tot_row}>=H5,"✅ OK",IF(G{tot_row}>=H5*0.8,"🟡 Razoável","🔴 Baixo"))',
+    C["azul_bg"], num="@")
+ws2.cell(row=st_row, column=7).alignment = al("center"); ws2.cell(row=st_row, column=7).font = ft(9, True)
+
+# Carbs
+frm(ws2, st_row, 8,
+    f'=IF(H{tot_row}<=J5,"✅ OK",IF(H{tot_row}<=J5*1.15,"🟡 Atenção","🔴 Excedido"))',
+    C["amarelo_bg"], num="@")
+ws2.cell(row=st_row, column=8).alignment = al("center"); ws2.cell(row=st_row, column=8).font = ft(9, True)
+
+# ── Caloric summary by meal ──
+sum_row = st_row + 2
+ws2.row_dimensions[sum_row - 1].height = 8
+ws2.row_dimensions[sum_row].height = 24
+ws2.merge_cells(f"B{sum_row}:K{sum_row}")
+c = ws2.cell(row=sum_row, column=2, value="  📊 CALORIAS POR REFEIÇÃO")
+c.font = ft(10, True, C["branco"]); c.fill = F(C["cinza_esc"]); c.border = BDR; c.alignment = al("left")
+sum_row += 1
+ws2.row_dimensions[sum_row].height = 30
+for col_h, h, bg_h in [(2,"Refeição",C["cinza_med"]),(4,"Calorias (kcal)",C["verm"]),(6,"Proteínas (g)",C["azul_med"]),(8,"Carboidratos (g)",C["amarelo"]),(10,"% das Calorias Totais",C["roxo"])]:
+    ws2.merge_cells(f"{get_column_letter(col_h)}{sum_row}:{get_column_letter(col_h+1)}{sum_row}")
+    c = ws2.cell(row=sum_row, column=col_h, value=h)
+    c.font = ft(9, True, C["branco"]); c.fill = F(bg_h); c.border = BDR; c.alignment = al("center")
+
+sum_row += 1
+# Find the actual rows for each meal in ws2_data
+meal_rows = {}  # meal -> [rows]
+for i, item in enumerate(ws2_data):
+    if item[0] == "food":
+        refeicao, alimento, porcao = item[1]
+        r = MEAL_START + i
+        if refeicao not in meal_rows:
+            meal_rows[refeicao] = []
+        meal_rows[refeicao].append(r)
+
+meal_order = ["☀️ Café da Manhã","🍌 Lanche da Manhã","🥃 Almoço","🍵 Lanche da Tarde","🌙 Jantar","🌛 Ceia"]
+for j, meal in enumerate(meal_order):
+    if meal not in meal_rows:
+        continue
+    rows_m = meal_rows[meal]
+    dark_m, light_m = meal_colors[meal]
+    row_ref = f"F{rows_m[0]}:F{rows_m[-1]}"
+    prot_ref = f"G{rows_m[0]}:G{rows_m[-1]}"
+    carb_ref = f"H{rows_m[0]}:H{rows_m[-1]}"
+    ws2.row_dimensions[sum_row].height = 20
+    alt_bg2 = light_m if j % 2 == 0 else C["branco"]
+
+    ws2.merge_cells(f"B{sum_row}:C{sum_row}")
+    c = ws2.cell(row=sum_row, column=2, value=meal)
+    c.font = ft(10, True, C["branco"]); c.fill = F(dark_m); c.border = BDR; c.alignment = al("left")
+
+    ws2.merge_cells(f"D{sum_row}:E{sum_row}")
+    frm(ws2, sum_row, 4, f"=SUM({row_ref})", alt_bg2, bold=True, num="0.0")
+
+    ws2.merge_cells(f"F{sum_row}:G{sum_row}")
+    frm(ws2, sum_row, 6, f"=SUM({prot_ref})", alt_bg2, num="0.0")
+
+    ws2.merge_cells(f"H{sum_row}:I{sum_row}")
+    frm(ws2, sum_row, 8, f"=SUM({carb_ref})", alt_bg2, num="0.0")
+
+    ws2.merge_cells(f"J{sum_row}:K{sum_row}")
+    frm(ws2, sum_row, 10, f"=IFERROR(D{sum_row}/F{tot_row},0)", alt_bg2, num="0.0%")
+
+    sum_row += 1
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ABA 3 — DASHBOARD DE MACROS
+# ══════════════════════════════════════════════════════════════════════════
+ws3 = wb.create_sheet("📊 Dashboard de Macros")
+ws3.sheet_view.showGridLines = False
+
+col_w3 = {"A":2,"B":24,"C":18,"D":18,"E":18,"F":18,"G":18,"H":2}
+for col, w in col_w3.items():
+    ws3.column_dimensions[col].width = w
+
+ws3.row_dimensions[1].height = 6
+title(ws3, 2, "📊  DASHBOARD DE MACRONUTRIENTES E SAÚDE NUTRICIONAL", C["azul_esc"], 6, sz=13)
+
+ws3.row_dimensions[3].height = 8
+
+# ── KPI Cards ──
+ws3.row_dimensions[4].height = 28; ws3.row_dimensions[5].height = 42
+
+KPIS = [
+    ("🔥 CALORIAS\nCONSUMIDAS", f"='🍽️ Plano do Dia'!F{tot_row}", C["verm"],      "0.0 \"kcal\""),
+    ("🎯 META\nCALÓRICA",       "='🍽️ Plano do Dia'!F4",           C["teal"],      "0 \"kcal\""),
+    ("💪 PROTEÍNAS",            f"='🍽️ Plano do Dia'!G{tot_row}",  C["azul_med"],  "0.0 \"g\""),
+    ("🌾 CARBOIDRATOS",         f"='🍽️ Plano do Dia'!H{tot_row}",  C["amarelo"],   "0.0 \"g\""),
+    ("🥑 GORDURAS",             f"='🍽️ Plano do Dia'!I{tot_row}",  C["laranja"],   "0.0 \"g\""),
+    ("🌿 FIBRAS",               f"='🍽️ Plano do Dia'!J{tot_row}",  C["verde_med"], "0.0 \"g\""),
+]
+
+for i, (lbl, fml, bg3, num3) in enumerate(KPIS):
+    col = 2 + i
+    c = ws3.cell(row=4, column=col, value=lbl)
+    c.font = ft(9, True, C["branco"]); c.fill = F(bg3); c.border = BDR; c.alignment = al("center", "center", wrap=True)
+    c2 = ws3.cell(row=5, column=col, value=fml)
+    c2.font = ft(16, True, C["branco"]); c2.fill = F(bg3); c2.border = BDR; c2.alignment = al("center"); c2.number_format = num3
+
+ws3.row_dimensions[6].height = 10
+
+# ── Distribuição calórica de macros ──
+sec(ws3, 7, "  🥧 DISTRIBUIÇÃO CALÓRICA POR MACRONUTRIENTE (meta: 50% carbs, 25% prot, 25% gord)", C["azul_esc"], 6)
+ws3.row_dimensions[8].height = 32
+for col_h, h, bg_h in [(2,"Macro",C["azul_med"]),(3,"Consumido (g)",C["azul_med"]),(4,"Kcal do macro",C["verm"]),(5,"% das Kcal totais",C["verm"]),(6,"Meta %",C["verde_med"]),(7,"Status",C["verde_med"])]:
+    hdr(ws3, 8, col_h, h, bg_h)
+
+MACROS_DIST = [
+    ("💪 Proteínas",    f"='🍽️ Plano do Dia'!G{tot_row}", 4, 25),
+    ("🌾 Carboidratos", f"='🍽️ Plano do Dia'!H{tot_row}", 4, 50),
+    ("🥑 Gorduras",     f"='🍽️ Plano do Dia'!I{tot_row}", 9, 25),
+]
+macro_row = 9
+for macro_name, g_fml, kcal_per_g, meta_pct in MACROS_DIST:
+    ws3.row_dimensions[macro_row].height = 22
+    alt_bg3 = C["azul_bg"] if macro_row % 2 == 0 else C["branco"]
+    c = ws3.cell(row=macro_row, column=2, value=macro_name)
+    c.font = ft(10, True); c.fill = F(alt_bg3); c.border = BDR; c.alignment = al("left", "center")
+    frm(ws3, macro_row, 3, g_fml, alt_bg3, num="0.0 \"g\"")
+    frm(ws3, macro_row, 4, f"=C{macro_row}*{kcal_per_g}", alt_bg3, num="0.0 \"kcal\"")
+    frm(ws3, macro_row, 5, f"=IFERROR(D{macro_row}/B5,0)", alt_bg3, num="0.0%")
+    frm(ws3, macro_row, 6, f"{meta_pct}%", alt_bg3, num="0%")
+    c7 = ws3.cell(row=macro_row, column=7)
+    c7.value = f'=IF(ABS(E{macro_row}-{meta_pct/100})<0.05,"✅ Ideal",IF(E{macro_row}<{meta_pct/100},"🔽 Abaixo","🔼 Acima"))'
+    c7.font = ft(9); c7.fill = F(alt_bg3); c7.border = BDR; c7.alignment = al("center")
+    macro_row += 1
+
+ws3.row_dimensions[macro_row].height = 10; macro_row += 1
+
+# ── Indicadores de saúde ──
+sec(ws3, macro_row, "  🏥 INDICADORES DE SAÚDE NUTRICIONAL", C["verde_esc"], 6)
+macro_row += 1
+ws3.row_dimensions[macro_row].height = 32
+for col_h, h, bg_h in [(2,"Indicador",C["verde_med"]),(3,"Valor Atual",C["verde_med"]),(4,"Meta/Recomendação",C["verde_med"]),(5,"Status",C["verde_med"]),(6,"Dica",C["verde_med"])]:
+    if col_h == 6:
+        ws3.merge_cells(f"F{macro_row}:G{macro_row}")
+    hdr(ws3, macro_row, col_h, h, bg_h)
+macro_row += 1
+
+INDICADORES = [
+    ("🔥 Balanço Calórico",
+     f"='🍽️ Plano do Dia'!F{tot_row}-'🍽️ Plano do Dia'!F4",
+     "0 kcal (equilíbrio)",
+     f'=IF(ABS(\'🍽️ Plano do Dia\'!F{tot_row}-\'🍽️ Plano do Dia\'!F4)<=100,"✅ Equilibrado",IF(\'🍽️ Plano do Dia\'!F{tot_row}<\'🍽️ Plano do Dia\'!F4,"⬇️ Déficit","⬆️ Superávit"))',
+     "Déficit de 300-500kcal para emagrecer com saúde", "0.0 \"kcal\""),
+    ("💪 Proteína/kg peso",
+     f"=IFERROR('🍽️ Plano do Dia'!G{tot_row}/'🍽️ Plano do Dia'!H4,0)",
+     "1.6–2.2 g/kg (atletas)",
+     f'=IF(\'🍽️ Plano do Dia\'!G{tot_row}/\'🍽️ Plano do Dia\'!H4>=1.6,"✅ Adequado","⚠️ Aumentar proteína")',
+     "Inclua carnes, ovos, leguminosas", "0.00 \"g/kg\""),
+    ("🌿 Fibras totais",
+     f"='🍽️ Plano do Dia'!J{tot_row}",
+     "≥25g/dia (OMS)",
+     f'=IF(\'🍽️ Plano do Dia\'!J{tot_row}>=25,"✅ Adequado",IF(\'🍽️ Plano do Dia\'!J{tot_row}>=15,"🟡 Regular","🔴 Insuficiente"))',
+     "Aumente frutas, verduras e grãos integrais", "0.0 \"g\""),
+    ("🥑 Gordura total",
+     f"='🍽️ Plano do Dia'!I{tot_row}",
+     "20–35% das kcal totais",
+     f'=IF(\'🍽️ Plano do Dia\'!I{tot_row}*9/\'🍽️ Plano do Dia\'!F{tot_row}<=0.35,"✅ Adequado","⚠️ Revisar gorduras")',
+     "Prefira azeite, abacate e oleaginosas", "0.0 \"g\""),
+    ("🥗 Variedade vegetal",
+     f"=COUNTIFS('🍽️ Plano do Dia'!D{MEAL_START}:D{MEAL_LAST_ROW},\"*Almoço*\",'🍽️ Plano do Dia'!C{MEAL_START}:C{MEAL_LAST_ROW},\"<>\")",
+     "≥5 porções de vegetais/dia",
+     '"Acompanhe sua variedade"',
+     "Diversifique cores no prato", "0 \"porções\""),
+]
+
+for j, (ind, val_fml, meta_txt, status_fml, dica, val_num) in enumerate(INDICADORES):
+    ws3.row_dimensions[macro_row].height = 22
+    alt_bg4 = C["verde_bg"] if j % 2 == 0 else C["branco"]
+    c = ws3.cell(row=macro_row, column=2, value=ind)
+    c.font = ft(10, True); c.fill = F(alt_bg4); c.border = BDR; c.alignment = al("left", "center")
+    frm(ws3, macro_row, 3, val_fml, alt_bg4, bold=True, num=val_num)
+    c4 = ws3.cell(row=macro_row, column=4, value=meta_txt)
+    c4.font = ft(9); c4.fill = F(alt_bg4); c4.border = BDR; c4.alignment = al("center", "center", wrap=True)
+    c5 = ws3.cell(row=macro_row, column=5, value=status_fml)
+    c5.font = ft(9, True); c5.fill = F(alt_bg4); c5.border = BDR; c5.alignment = al("center")
+    ws3.merge_cells(f"F{macro_row}:G{macro_row}")
+    c6 = ws3.cell(row=macro_row, column=6, value=dica)
+    c6.font = ft(9, italic=True, color=C["cinza"]); c6.fill = F(alt_bg4); c6.border = BDR; c6.alignment = al("left", "center", wrap=True)
+    macro_row += 1
+
+macro_row += 1
+
+# ── Guia de Porções ──
+sec(ws3, macro_row, "  📏 GUIA DE PORÇÕES RECOMENDADAS (Dieta de 2000 kcal)", C["teal"], 6)
+macro_row += 1
+ws3.row_dimensions[macro_row].height = 30
+for col_h, h, bg_h in [(2,"Grupo Alimentar",C["teal"]),(3,"Porções/dia",C["teal"]),(4,"Exemplo de 1 porção",C["teal"]),(5,"Calorias aprox.",C["verm"]),(6,"Dica",C["teal"])]:
+    if col_h == 6:
+        ws3.merge_cells(f"F{macro_row}:G{macro_row}")
+    hdr(ws3, macro_row, col_h, h, bg_h)
+macro_row += 1
+
+PORCOES = [
+    ("🌾 Cereais e tubérculos",   "6 porções",  "4 colh. arroz cozido = 100g ou 1 fatia pão integral",   "~100–130 kcal", "Prefira integrais"),
+    ("🥩 Carnes e ovos",          "1–2 porções","1 filé de frango = 100g ou 2 ovos mexidos",              "~150–200 kcal", "Carnes magras grelhadas"),
+    ("🫘 Leguminosas",            "1 porção",   "1 concha feijão = 80g ou ½ xíc grão-de-bico",           "~60–80 kcal",   "Rico em fibras e ferro"),
+    ("🥛 Laticínios",             "3 porções",  "1 copo leite 200ml ou 1 pot. iogurte grego 100g",        "~70–100 kcal",  "Fontes de cálcio"),
+    ("🥗 Vegetais e saladas",     "3+ porções", "1 prato raso de salada crua = 60–100g",                   "~10–25 kcal",   "Quanto mais colorido melhor"),
+    ("🍎 Frutas",                 "3 porções",  "1 fruta média ou 1 xícara de morangos = 100–130g",        "~40–70 kcal",   "Variar tipos e cores"),
+    ("🥜 Gorduras e oleaginosas", "1 porção",   "1 col. sobr. azeite = 10g ou 5 castanhas-do-Pará = 15g","~70–100 kcal",  "Gorduras boas, com moderação"),
+    ("💧 Líquidos",               "8 copos/dia","1 copo água 250ml",                                       "0 kcal",        "Beba 2–3 litros/dia"),
+]
+
+for j, (grupo, porcoes, exemplo, kcal_aprox, dica) in enumerate(PORCOES):
+    ws3.row_dimensions[macro_row].height = 22
+    alt_bg5 = C["teal_bg"] if j % 2 == 0 else C["branco"]
+    for col_d, val, aln in [
+        (2, grupo,      "left"),
+        (3, porcoes,    "center"),
+        (4, exemplo,    "left"),
+        (5, kcal_aprox, "center"),
+    ]:
+        c = ws3.cell(row=macro_row, column=col_d, value=val)
+        c.font = ft(9); c.fill = F(alt_bg5); c.border = BDR; c.alignment = al(aln, "center", wrap=True)
+    ws3.merge_cells(f"F{macro_row}:G{macro_row}")
+    c = ws3.cell(row=macro_row, column=6, value=dica)
+    c.font = ft(9, italic=True, color=C["cinza"]); c.fill = F(alt_bg5); c.border = BDR; c.alignment = al("left", "center")
+    macro_row += 1
+
+
+# ── Set active to dashboard ──
+wb.active = ws3
+
+wb.save("/home/claude/plano_alimentar.xlsx")
+print("Saved OK — rows in food table:", LAST_FOOD_ROW)
