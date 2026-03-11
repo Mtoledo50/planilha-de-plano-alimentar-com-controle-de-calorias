@@ -1,0 +1,10 @@
+Planilha completa com 350 fórmulas e zero erros! Aqui está o que foi construído com base na Tabela TACO (NEPA/UNICAMP) e TBCA (USP):
+
+3 abas integradas:
+📋 Tabela de Alimentos — 110 alimentos distribuídos em 11 categorias nutricionais com valores por 100g:
+
+🌾 Carboidratos/Cereais · 🥩 Proteínas Animais · 🫘 Proteínas Vegetais · 🥛 Laticínios · 🥗 Saladas · 🥦 Legumes · 🍎 Frutas · 💧 Bebidas · 🥜 Oleaginosas · 🍫 Suplementos · 🍽️ Temperos
+Colunas: Kcal/100g, Proteínas, Carboidratos, Gorduras, Fibras, Kcal por grama (calculado), Fonte/Observação
+
+🍽️ Plano do Dia — Plano modelo completo com 6 refeições (café, lanche manhã, almoço, lanche tarde, jantar, ceia). Para cada alimento, basta digitar o nome e a porção em gramas — as calorias e macros são calculadas automaticamente via VLOOKUP na tabela de referência. Inclui totais por refeição e status vs. meta calórica.
+📊 Dashboard de Macros — KPIs em tempo real (calorias, proteínas, carboidratos, gorduras, fibras), distribuição calórica por macronutriente comparada à meta 50/25/25, indicadores de saúde nutricional e guia de porções recomendadas pela OMS.
