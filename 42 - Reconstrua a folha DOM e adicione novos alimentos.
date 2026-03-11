@@ -1,0 +1,399 @@
+bash
+
+cd /home/claude && python3 << 'EOF'
+from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+def F(h): return PatternFill("solid", start_color=h, fgColor=h)
+def ft(sz=10, bold=False, color="212121", italic=False):
+    return Font(name="Calibri", size=sz, bold=bold, color=color, italic=italic)
+def al(h="center", v="center", wrap=False):
+    return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+def sd(st="thin", c="BDBDBD"): return Side(style=st, color=c)
+def bdr(t="thin", c="BDBDBD"):
+    s=sd(t,c); return Border(left=s,right=s,top=s,bottom=s)
+def bdr_med():
+    s=sd("medium","37474F")
+    return Border(left=s,right=s,top=s,bottom=s)
+BDR = bdr()
+
+# ── Colors ──
+C = dict(
+    cafe_dark="4E342E",   cafe_light="EFEBE9",
+    lanche_dark="E65100", lanche_light="FFF3E0",
+    almoco_dark="1B5E20", almoco_light="E8F5E9",
+    tarde_dark="0D47A1",  tarde_light="E3F2FD",
+    jantar_dark="311B92", jantar_light="EDE7F6",
+    sub_dark="546E7A",    sub_light="ECEFF1",
+    dom_dark="B71C1C",
+    input_am="FFFDE7", input_bor="F9A825", inp_txt="0D47A1",
+    total_dark="263238",
+)
+
+# ── New foods to add (kcal/100g, prot, carb, gord, fibra) ── TACO/IBGE
+NEW_NUTRI = {
+    "Farelo de aveia":      (246, 17.3, 66.2,  7.0, 15.4),  # TACO
+    "Doce de leite":        (321,  6.2, 56.0,  8.2,  0.0),  # TACO
+    "Doce de leite diet":   (240,  7.0, 38.0,  7.0,  0.0),  # estimado
+    "Vazio grelhado":       (219, 30.0,  0.0, 10.5,  0.0),  # TACO - corte bovino
+    "Cerveja Amstel Ultra": (24,   0.3,  1.5,  0.0,  0.0),  # 24kcal/100ml
+    "Maionese light":       (237,  1.2,  9.5, 21.5,  0.0),  # TACO
+    "Milho verde cozido":   (86,   2.7, 19.2,  1.0,  2.4),  # TACO
+    "Massa para pizza":     (271,  8.5, 53.0,  2.5,  2.0),  # estimado média mercado
+    "Oregano seco":         (265,  9.0, 64.4,  4.3, 42.5),  # TACO (uso em gramas pequenas)
+}
+
+wb = load_workbook('/home/claude/plano_semanal.xlsx')
+ws_lst = wb['_Listas']
+
+# ── Step 1: Add new foods to _Listas ──
+# Find last row in food list (col A) and nutri table (col C)
+last_list = 1
+last_nutri = 1
+for row in ws_lst.iter_rows(min_row=2, max_row=ws_lst.max_row, min_col=1, max_col=1):
+    if row[0].value:
+        last_list = row[0].row
+for row in ws_lst.iter_rows(min_row=2, max_row=ws_lst.max_row, min_col=3, max_col=3):
+    if row[0].value:
+        last_nutri = row[0].row
+
+# Get existing names
+existing_names = set()
+for row in ws_lst.iter_rows(min_row=2, max_row=last_list, min_col=1, max_col=1):
+    if row[0].value: existing_names.add(str(row[0].value))
+
+existing_nutri = set()
+for row in ws_lst.iter_rows(min_row=2, max_row=last_nutri, min_col=3, max_col=3):
+    if row[0].value: existing_nutri.add(str(row[0].value))
+
+added = []
+for name, vals in NEW_NUTRI.items():
+    if name not in existing_names:
+        last_list += 1
+        ws_lst.cell(row=last_list, column=1, value=name)
+        added.append(name)
+    if name not in existing_nutri:
+        last_nutri += 1
+        ws_lst.cell(row=last_nutri, column=3, value=name)
+        for ci, v in enumerate(vals, 4):
+            ws_lst.cell(row=last_nutri, column=ci, value=v)
+
+print(f"Added {len(added)} new foods: {added}")
+
+FEND = last_list
+TEND = last_nutri
+FRANGE = f"_Listas!$A$2:$A${FEND}"
+TBL_REF = f"_Listas!$C$2:$H${TEND}"
+
+# ── Step 2: Rebuild DOM sheet ──
+# Delete old DOM and recreate
+if 'DOM' in wb.sheetnames:
+    idx = wb.sheetnames.index('DOM')
+    del wb['DOM']
+    ws = wb.create_sheet('DOM', idx)
+else:
+    ws = wb.create_sheet('DOM')
+
+ws.sheet_view.showGridLines = False
+ws.freeze_panes = "C9"
+
+for col,w in [("A",1.5),("B",14),("C",32),("D",11),("E",11),
+              ("F",11),("G",11),("H",11),("I",16),("J",1.5)]:
+    ws.column_dimensions[col].width = w
+
+# ── New DOM menu ──
+DOM_NEW = {
+    "cafe": [
+        ("Café sem açúcar",     200, "200 ml"),
+        ("Banana",              100, "1 unidade média"),
+        ("Ovo de galinha cozido",100,"2 unidades ≈ 100g"),
+        ("Farelo de aveia",      30, "3 col. sopa"),
+        ("Doce de leite",        20, "1 col. sopa"),
+        ("Melão",               120, "1 fatia"),
+        ("Creatina monohidratada", 6,"2 doses"),
+    ],
+    "cafe_sub": [
+        ("Café sem açúcar",     200, "200 ml"),
+        ("Tapioca de goma",      30, "1 tapioca peq."),
+        ("Ovo de galinha cozido",100,"2 unidades"),
+        ("Banana",               70, "½ unidade"),
+        ("Doce de leite diet",   20, "1 col. sopa"),
+        ("Mamão papaya",        120, "1 fatia"),
+        ("Creatina monohidratada",6,"2 doses"),
+    ],
+    "lanche": [
+        ("Leite de vaca integral",150,"¾ copo"),
+        ("Whey protein",          30, "1 scoop"),
+    ],
+    "almoco": [
+        ("Arroz branco cozido",  140, "4 col. sopa"),
+        ("Vazio grelhado",       170, "1 bife"),
+        ("Tomate",                30, "2 rodelas"),
+        ("Alface crespa",         30, "salada a gosto"),
+        ("Cerveja Amstel Ultra", 550, "2 latas 275ml"),
+    ],
+    "almoco_sub": [
+        ("Batata inglesa cozida",170, "2 unid. médias"),
+        ("Vazio grelhado",       180, "1 bife grande"),
+        ("Maionese light",        26, "2 col. sopa"),
+        ("Milho verde cozido",    15, "1 col. sopa"),
+    ],
+    "tarde": [
+        ("Café sem açúcar",      200, "200 ml"),
+        ("Pão integral",          60, "2 fatias"),
+        ("Queijo mussarela",      20, "1 fatia"),
+        ("Ovo de galinha cozido", 50, "1 unidade"),
+        ("Mamão papaya",         120, "1 fatia"),
+    ],
+    "jantar": [
+        ("Coca-Cola Light",       350, "1 lata"),
+        ("Massa para pizza",      120, "2 unid. brotinho"),
+        ("Molho de tomate",        20, "2 col. sopa"),
+        ("Queijo mussarela",       40, "2 fatias"),
+        ("Filé de frango grelhado",120,"1 filé médio"),
+        ("Oregano seco",           10, "1 col. chá"),
+    ],
+}
+
+REFEICOES_DOM = [
+    ("cafe",      "☕ Café da Manhã",          "08:00h", C["cafe_dark"],   C["cafe_light"]),
+    ("cafe_sub",  "🔄 Opção Café da Manhã",    "",       C["sub_dark"],    C["sub_light"]),
+    ("lanche",    "🍌 Lanche da Tarde",         "15:00h", C["lanche_dark"], C["lanche_light"]),
+    ("almoco",    "🥗 Almoço",                  "13:00h", C["almoco_dark"], C["almoco_light"]),
+    ("almoco_sub","🔄 Opção Almoço",            "",       C["sub_dark"],    C["sub_light"]),
+    ("tarde",     "☕ Café da Tarde",           "17:00h", C["tarde_dark"],  C["tarde_light"]),
+    ("jantar",    "🌙 Jantar",                  "20:30h", C["jantar_dark"], C["jantar_light"]),
+]
+
+day_color = C["dom_dark"]
+
+# Row 1 spacer
+ws.row_dimensions[1].height = 5
+
+# Title
+ws.row_dimensions[2].height = 36
+ws.merge_cells("B2:I2")
+c = ws["B2"]
+c.value = "🍽️  PLANO ALIMENTAR  ·  Domingo 🔴  ·  (Cardápio especial)"
+c.font = ft(13, True, "FFFFFF"); c.fill = F(day_color); c.alignment = al(); c.border = BDR
+
+# Instructions
+ws.row_dimensions[3].height = 16
+ws.merge_cells("B3:I3")
+c = ws["B3"]
+c.value = "  ▼ Clique na seta ▼ em cada alimento para trocar  ·  Edite a porção (g) para recalcular as calorias automaticamente"
+c.font = ft(8, italic=True, color="546E7A"); c.fill = F("ECEFF1"); c.alignment = al("left"); c.border = BDR
+
+# Config row
+ws.row_dimensions[4].height = 24
+for col,val,bg,bl in [(2,"Meta Kcal/dia:","ECEFF1",False),(3,2000,"FFFDE7",True),
+                       (4,"Peso (kg):","ECEFF1",False),(5,70,"FFFDE7",True),
+                       (6,"Objetivo:","ECEFF1",False),(7,"Emagrecimento","FFFDE7",True)]:
+    c=ws.cell(row=4,column=col,value=val)
+    c.font=ft(9,bl,"0D47A1" if bl else "546E7A")
+    c.fill=F(bg); c.border=BDR
+    c.alignment=al("right" if not bl else "center")
+
+ws.row_dimensions[5].height = 6
+
+# Column headers
+ws.row_dimensions[6].height = 40
+for col,h,bg in [
+    (2,"Refeição / Horário","263238"),(3,"Alimento  ▼","263238"),
+    (4,"Porção\n(g)","1565C0"),(5,"Kcal","B71C1C"),
+    (6,"Prot.\n(g)","1565C0"),(7,"Carb.\n(g)","E65100"),
+    (8,"Gord.\n(g)","5D4037"),(9,"Medida caseira","263238"),
+]:
+    c=ws.cell(row=6,column=col,value=h)
+    c.font=ft(9,True,"FFFFFF"); c.fill=F(bg)
+    c.alignment=al("center","center",wrap=True); c.border=BDR
+
+ws.row_dimensions[7].height = 5
+
+row = 8
+food_cells = []
+meal_ranges = {}
+
+for ref_key,ref_nome,hora,dark,light in REFEICOES_DOM:
+    items = DOM_NEW.get(ref_key, [])
+    if not items: continue
+    is_sub = ref_key.endswith("_sub")
+
+    # Section header
+    ws.row_dimensions[row].height = 24 if not is_sub else 20
+    ws.merge_cells(f"B{row}:I{row}")
+    label = f"  {ref_nome}  {hora}" if hora else f"  {ref_nome}  (alternativa)"
+    c = ws.cell(row=row, column=2, value=label)
+    c.font = ft(10 if not is_sub else 9, True, "FFFFFF")
+    c.fill = F(dark); c.alignment = al("left"); c.border = BDR
+    row += 1
+
+    meal_start = row
+    for idx,(alimento,gramas,medida) in enumerate(items):
+        ws.row_dimensions[row].height = 20
+        ab = light if idx%2==0 else "FFFFFF"
+
+        # Col B: refeição label (first row only)
+        c=ws.cell(row=row,column=2,value=ref_nome if idx==0 else "")
+        c.font=ft(8,False,"FFFFFF" if idx==0 else "BDBDBD")
+        c.fill=F(dark if idx==0 else light); c.border=BDR
+        c.alignment=al("center","center",wrap=True)
+
+        # Col C: alimento (dropdown input)
+        c=ws.cell(row=row,column=3,value=alimento)
+        c.font=ft(10,True,C["inp_txt"]); c.fill=F(C["input_am"])
+        c.border=bdr("thin",C["input_bor"]); c.alignment=al("left","center")
+        food_cells.append(f"C{row}")
+
+        # Col D: porção
+        c=ws.cell(row=row,column=4,value=gramas)
+        c.font=ft(10,True,C["inp_txt"]); c.fill=F(C["input_am"])
+        c.border=bdr("thin",C["input_bor"]); c.alignment=al("right","center")
+        c.number_format="0.0"
+
+        # Cols E-H: VLOOKUP formulas
+        for col_f,off in [(5,2),(6,3),(7,4),(8,5)]:
+            f=f"=IFERROR(VLOOKUP(C{row},{TBL_REF},{off},0)*D{row}/100,0)"
+            c=ws.cell(row=row,column=col_f,value=f)
+            c.font=ft(10); c.fill=F(ab); c.border=BDR
+            c.alignment=al("right","center"); c.number_format="0.0"
+
+        # Col I: medida caseira
+        c=ws.cell(row=row,column=9,value=medida)
+        c.font=ft(8,italic=True,color="607D8B"); c.fill=F(ab)
+        c.border=BDR; c.alignment=al("left","center")
+        row += 1
+
+    meal_ranges[ref_key] = (meal_start, row-1)
+
+    # Subtotal for main meals only
+    if not is_sub:
+        ws.row_dimensions[row].height = 18
+        ws.merge_cells(f"B{row}:C{row}")
+        c=ws.cell(row=row,column=2,value=f"Subtotal {ref_nome}")
+        c.font=ft(8,True,"FFFFFF"); c.fill=F(dark); c.border=BDR; c.alignment=al("right")
+        for cf,let in [(4,"D"),(5,"E"),(6,"F"),(7,"G"),(8,"H")]:
+            c=ws.cell(row=row,column=cf,
+                value=f"=SUM({let}{meal_start}:{let}{row-1})")
+            c.font=ft(9,True,"FFFFFF"); c.fill=F(dark); c.border=BDR
+            c.alignment=al("right"); c.number_format="0.0"
+        ws.cell(row=row,column=9).fill=F(dark); ws.cell(row=row,column=9).border=BDR
+        row += 1
+
+    ws.row_dimensions[row].height=4; row+=1
+
+# Grand total
+ws.row_dimensions[row].height = 32
+ws.merge_cells(f"B{row}:C{row}")
+c=ws.cell(row=row,column=2,value="📊 TOTAL DO DIA")
+c.font=ft(12,True,"FFFFFF"); c.fill=F("263238"); c.border=bdr_med(); c.alignment=al("center")
+
+main_keys = [k for k,_,_,_,_ in REFEICOES_DOM if not k.endswith("_sub")]
+for cf,let in [(4,"D"),(5,"E"),(6,"F"),(7,"G"),(8,"H")]:
+    ranges=[f"{let}{s}:{let}{e}" for k,(s,e) in meal_ranges.items() if not k.endswith("_sub")]
+    f="=SUM("+",".join(ranges)+")" if ranges else "0"
+    c=ws.cell(row=row,column=cf,value=f)
+    c.font=ft(11,True,"FFFFFF"); c.fill=F("263238"); c.border=bdr_med()
+    c.alignment=al("right"); c.number_format="0.0"
+ws.cell(row=row,column=9).fill=F("263238"); ws.cell(row=row,column=9).border=bdr_med()
+
+tot_row=row; row+=1
+
+# Status
+ws.row_dimensions[row].height=22
+ws.merge_cells(f"B{row}:C{row}")
+c=ws.cell(row=row,column=2,value="🎯 Status calórico:")
+c.font=ft(9,True); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("right")
+ws.merge_cells(f"D{row}:I{row}")
+c=ws.cell(row=row,column=4,
+    value=f'=IF(E{tot_row}<C4*0.9,"⚠️ Abaixo da meta",IF(E{tot_row}<=C4,"✅ Na meta",IF(E{tot_row}<=C4*1.1,"🟡 Ligeiramente acima","🔴 Acima da meta")))')
+c.font=ft(10,True); c.fill=F("ECEFF1"); c.border=BDR; c.alignment=al("center")
+row+=2
+
+# Per-meal summary table
+ws.row_dimensions[row].height=26
+ws.merge_cells(f"B{row}:I{row}")
+c=ws.cell(row=row,column=2,value="  📊 RESUMO POR REFEIÇÃO")
+c.font=ft(10,True,"FFFFFF"); c.fill=F("37474F"); c.alignment=al("left"); c.border=BDR
+row+=1
+
+ws.row_dimensions[row].height=32
+for col,h,bg in [(2,"Refeição","37474F"),(3,"Kcal","B71C1C"),(4,"% do total","B71C1C"),
+                 (5,"Prot.","1565C0"),(6,"Carb.","E65100"),(7,"Gord.","5D4037"),(8,"Horário","37474F")]:
+    c=ws.cell(row=row,column=col,value=h)
+    c.font=ft(9,True,"FFFFFF"); c.fill=F(bg)
+    c.alignment=al("center","center",wrap=True); c.border=BDR
+ws.cell(row=row,column=9).fill=F("37474F"); ws.cell(row=row,column=9).border=BDR
+row+=1
+
+for j,(ref_key,ref_nome,hora,dark,light) in enumerate(REFEICOES_DOM):
+    if ref_key.endswith("_sub") or ref_key not in meal_ranges: continue
+    ms,me = meal_ranges[ref_key]
+    if ms>me: continue
+    ws.row_dimensions[row].height=20
+    ab2 = light if j%2==0 else "FFFFFF"
+    c=ws.cell(row=row,column=2,value=ref_nome)
+    c.font=ft(9,True,"FFFFFF"); c.fill=F(dark); c.border=BDR; c.alignment=al("left")
+    c=ws.cell(row=row,column=3,value=f"=SUM(E{ms}:E{me})")
+    c.font=ft(9,True); c.fill=F(ab2); c.border=BDR; c.alignment=al("right"); c.number_format="0.0"
+    c=ws.cell(row=row,column=4,value=f"=IFERROR(C{row}/E{tot_row},0)")
+    c.font=ft(9); c.fill=F(ab2); c.border=BDR; c.alignment=al("right"); c.number_format="0.0%"
+    for cf,let in [(5,"F"),(6,"G"),(7,"H")]:
+        c=ws.cell(row=row,column=cf,value=f"=SUM({let}{ms}:{let}{me})")
+        c.font=ft(9); c.fill=F(ab2); c.border=BDR; c.alignment=al("right"); c.number_format="0.0"
+    c=ws.cell(row=row,column=8,value=hora if hora else "—")
+    c.font=ft(9); c.fill=F(ab2); c.border=BDR; c.alignment=al("center")
+    ws.cell(row=row,column=9).fill=F(ab2); ws.cell(row=row,column=9).border=BDR
+    row+=1
+
+# Add dropdowns
+dv = DataValidation(type="list", formula1=FRANGE, allow_blank=True,
+                    showDropDown=False, showErrorMessage=False,
+                    showInputMessage=True,
+                    promptTitle="🍽️ Trocar alimento",
+                    prompt="Clique ▼ para ver todos os alimentos e escolher uma substituição.")
+dv.sqref = " ".join(food_cells)
+ws.add_data_validation(dv)
+
+print(f"DOM rebuilt: {len(food_cells)} dropdowns, {len(meal_ranges)} refeições, last row={row}")
+
+# ── Step 3: Also update dropdowns on ALL other day sheets ──
+# They reference the old FRANGE — update to new FEND
+for sheet_name in ['SEG','TER','QUA','QUI','SEX','SAB']:
+    ws_day = wb[sheet_name]
+    for dv_obj in ws_day.data_validations.dataValidation:
+        if '_Listas' in str(dv_obj.formula1):
+            dv_obj.formula1 = f"_Listas!$A$2:$A${FEND}"
+    print(f"  {sheet_name}: dropdown range updated to row {FEND}")
+
+# Also update VLOOKUP ranges in other sheets (TBL_REF end row)
+# The existing formulas use _Listas!$C$2:$H$80 — update to new TEND
+OLD_TBL = f"_Listas!$C$2:$H$80"
+NEW_TBL = f"_Listas!$C$2:$H${TEND}"
+updated_cells = 0
+for sheet_name in ['SEG','TER','QUA','QUI','SEX','SAB']:
+    ws_day = wb[sheet_name]
+    for row_cells in ws_day.iter_rows():
+        for cell in row_cells:
+            if cell.value and isinstance(cell.value, str) and OLD_TBL in cell.value:
+                cell.value = cell.value.replace(OLD_TBL, NEW_TBL)
+                updated_cells += 1
+print(f"Updated {updated_cells} VLOOKUP formulas in other sheets")
+
+wb.save('/home/claude/plano_semanal.xlsx')
+print("✅ Saved")
+EOF
+Saída
+
+Added 9 new foods: ['Farelo de aveia', 'Doce de leite', 'Doce de leite diet', 'Vazio grelhado', 'Cerveja Amstel Ultra', 'Maionese light', 'Milho verde cozido', 'Massa para pizza', 'Oregano seco']
+DOM rebuilt: 36 dropdowns, 7 refeições, last row=73
+  SEG: dropdown range updated to row 89
+  TER: dropdown range updated to row 89
+  QUA: dropdown range updated to row 89
+  QUI: dropdown range updated to row 89
+  SEX: dropdown range updated to row 89
+  SAB: dropdown range updated to row 89
+Updated 696 VLOOKUP formulas in other sheets
+✅ Saved
