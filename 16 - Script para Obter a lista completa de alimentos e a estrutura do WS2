@@ -1,0 +1,85 @@
+bash
+
+cd /home/claude && python3 -c "
+from openpyxl import load_workbook
+wb = load_workbook('plano_alimentar.xlsx')
+ws1 = wb['📋 Tabela de Alimentos']
+ws2 = wb['🍽️ Plano do Dia']
+
+# Get ALL food names from table (col B, rows 8+, skip headers/section rows)
+foods = []
+for row in ws1.iter_rows(min_row=8, max_row=ws1.max_row, min_col=2, max_col=4):
+    name = row[0].value
+    cat  = row[1].value
+    if name and cat and '↳' not in str(name) and name != 'Alimento':
+        foods.append((row[0].row, str(name), str(cat)[:30]))
+print(f'Total foods: {len(foods)}')
+for r, n, c in foods[:20]:
+    print(f'  R{r}: {n}')
+print('...')
+for r, n, c in foods[-10:]:
+    print(f'  R{r}: {n}')
+
+# Check ws2 structure
+print()
+print('=== WS2 structure ===')
+for row in ws2.iter_rows(min_row=1, max_row=20, min_col=2, max_col=6):
+    vals = [repr(str(c.value)[:25]) if c.value else 'None' for c in row]
+    print(f'  R{row[0].row}: {vals}')
+" 2>&1
+Saída
+
+Total foods: 126
+  R8: Arroz branco cozido
+  R9: Arroz integral cozido
+  R10: Macarrão cozido
+  R11: Macarrão integral cozido
+  R12: Pão francês
+  R13: Pão integral
+  R14: Aveia em flocos
+  R15: Batata inglesa cozida
+  R16: Batata doce cozida
+  R17: Mandioca cozida
+  R18: Tapioca (goma)
+  R19: Cuscuz de milho
+  R20: Quinoa cozida
+  R21: Granola
+  R24: Frango filé grelhado
+  R25: Frango coxa s/ pele grelhada
+  R26: Carne bovina patinho grelhado
+  R27: Carne bovina alcatra grelhada
+  R28: Tilápia grelhada
+  R29: Salmão assado
+...
+  R144: Sal (cloreto de sódio)
+  R145: Azeite de oliva (tempero)
+  R146: Vinagre de maçã
+  R147: Limão (suco)
+  R148: Mostarda
+  R149: Molho shoyu (soja)
+  R150: Tahine
+  R151: Gengibre fresco
+  R152: Cúrcuma (açafrão-da-terra)
+  R153: Canela em pó
+
+=== WS2 structure ===
+  R1: ['None', 'None', 'None', 'None', 'None']
+  R2: ["'🍽️  PLANO ALIMENTAR DIÁRI'", 'None', 'None', 'None', 'None']
+  R3: ["'Digite o nome do alimento'", 'None', 'None', 'None', 'None']
+  R4: ["'⚙️ CONFIGURAÇÕES DO DIA'", 'None', 'None', "'Meta Calórica (kcal):'", "'2000'"]
+  R5: ["'💊 Necessidade Proteica (g'", 'None', 'None', "'Fator prot (g/kg):'", "'1.8'"]
+  R6: ['None', 'None', 'None', 'None', 'None']
+  R7: ["'#'", "'Alimento'", "'Refeição'", "'Porção\\n(g)'", "'Calorias\\n(kcal)'"]
+  R8: ["'  ☀️ Café da Manhã'", 'None', 'None', 'None', 'None']
+  R9: ["'1'", "'Aveia em flocos'", "'☀️ Café da Manhã'", "'40'", '"=IFERROR(VLOOKUP(C9,\'📋 Ta"']
+  R10: ["'2'", "'Banana nanica'", "'☀️ Café da Manhã'", "'80'", '"=IFERROR(VLOOKUP(C10,\'📋 T"']
+  R11: ["'3'", "'Iogurte grego natural'", "'☀️ Café da Manhã'", "'100'", '"=IFERROR(VLOOKUP(C11,\'📋 T"']
+  R12: ["'4'", "'Mel'", "'☀️ Café da Manhã'", "'10'", '"=IFERROR(VLOOKUP(C12,\'📋 T"']
+  R13: ["'5'", "'Café sem açúcar'", "'☀️ Café da Manhã'", "'150'", '"=IFERROR(VLOOKUP(C13,\'📋 T"']
+  R14: ["'  🍌 Lanche da Manhã'", 'None', 'None', 'None', 'None']
+  R15: ["'6'", "'Maçã com casca'", "'🍌 Lanche da Manhã'", "'130'", '"=IFERROR(VLOOKUP(C15,\'📋 T"']
+  R16: ["'7'", "'Pasta de amendoim integra'", "'🍌 Lanche da Manhã'", "'20'", '"=IFERROR(VLOOKUP(C16,\'📋 T"']
+  R17: ["'  🥃 Almoço'", 'None', 'None', 'None', 'None']
+  R18: ["'8'", "'Arroz integral cozido'", "'🥃 Almoço'", "'120'", '"=IFERROR(VLOOKUP(C18,\'📋 T"']
+  R19: ["'9'", "'Feijão carioca cozido'", "'🥃 Almoço'", "'80'", '"=IFERROR(VLOOKUP(C19,\'📋 T"']
+  R20: ["'10'", "'Frango filé grelhado'", "'🥃 Almoço'", "'120'", '"=IFERROR(VLOOKUP(C20,\'📋 T"']
