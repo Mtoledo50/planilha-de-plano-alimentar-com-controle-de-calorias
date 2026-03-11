@@ -1,0 +1,33 @@
+bash
+
+cd /home/claude && python3 -c "
+from openpyxl import load_workbook
+wb = load_workbook('plano_alimentar.xlsx')
+print('Sheets:', wb.sheetnames)
+ws1 = wb['📋 Tabela de Alimentos']
+ws2 = wb['🍽️ Plano do Dia']
+
+# Check food table structure
+print('WS1 last row:', ws1.max_row)
+# Find a few rows to understand structure
+for row in ws1.iter_rows(min_row=7, max_row=20, min_col=2, max_col=4):
+    print(f'  R{row[0].row}: {repr(str(row[0].value)[:30])} | cat={repr(str(row[1].value)[:20])}')
+" 2>&1 | head -40
+Saída
+
+Sheets: ['📋 Tabela de Alimentos', '🍽️ Plano do Dia', '📊 Dashboard de Macros']
+WS1 last row: 153
+  R7: '  🌾 Carboidratos / Cereais e D' | cat='None'
+  R8: 'Arroz branco cozido' | cat='🌾 Carboidratos / Cer'
+  R9: 'Arroz integral cozido' | cat='🌾 Carboidratos / Cer'
+  R10: 'Macarrão cozido' | cat='🌾 Carboidratos / Cer'
+  R11: 'Macarrão integral cozido' | cat='🌾 Carboidratos / Cer'
+  R12: 'Pão francês' | cat='🌾 Carboidratos / Cer'
+  R13: 'Pão integral' | cat='🌾 Carboidratos / Cer'
+  R14: 'Aveia em flocos' | cat='🌾 Carboidratos / Cer'
+  R15: 'Batata inglesa cozida' | cat='🌾 Carboidratos / Cer'
+  R16: 'Batata doce cozida' | cat='🌾 Carboidratos / Cer'
+  R17: 'Mandioca cozida' | cat='🌾 Carboidratos / Cer'
+  R18: 'Tapioca (goma)' | cat='🌾 Carboidratos / Cer'
+  R19: 'Cuscuz de milho' | cat='🌾 Carboidratos / Cer'
+  R20: 'Quinoa cozida' | cat='🌾 Carboidratos / Cer'
