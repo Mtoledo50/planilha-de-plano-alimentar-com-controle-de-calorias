@@ -1,0 +1,14 @@
+bash
+
+cd /home/claude && python build_semanal.py 2>&1
+Saída
+
+  SEG: 25 dropdowns, last_row=60
+  TER: 33 dropdowns, last_row=70
+  QUA: 25 dropdowns, last_row=60
+  QUI: 33 dropdowns, last_row=70
+  SEX: 25 dropdowns, last_row=60
+  SAB: 33 dropdowns, last_row=70
+  DOM: 19 dropdowns, last_row=52
+Substituição: 85 rows
+✅ Done
